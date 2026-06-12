@@ -12,82 +12,176 @@ func renderHTML(cfg Config) string {
 	refreshMS := strconv.FormatInt(maxInt64(int64(cfg.Refresh/time.Millisecond), 250), 10)
 
 	page := `<!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{TITLE}}</title>
   <style>
     :root {
-      color-scheme: light dark;
-      --bg: #f7f7f4;
-      --fg: #202124;
-      --muted: #686b6f;
-      --line: #d9d8d2;
+      color-scheme: light;
+      --bg: #f7f8fb;
       --panel: #ffffff;
-      --accent: #176f7a;
-      --good: #16844a;
+      --panel-soft: #f1f5f9;
+      --text: #111827;
+      --muted: #64748b;
+      --border: #d8dee9;
+      --accent: #0891b2;
+      --accent-soft: rgba(8, 145, 178, 0.12);
+      --good: #16a34a;
+      --warn: #d97706;
+      --bad: #dc2626;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
     }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #111315;
-        --fg: #eff1f3;
-        --muted: #a6abb1;
-        --line: #2f3338;
-        --panel: #181b1f;
-        --accent: #61c3d0;
-        --good: #60d394;
-      }
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0d1117;
+      --panel: #151b23;
+      --panel-soft: #10161d;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --border: #30363d;
+      --accent: #67e8f9;
+      --accent-soft: rgba(103, 232, 249, 0.12);
+      --good: #4ade80;
+      --warn: #facc15;
+      --bad: #fb7185;
+      --shadow: none;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       min-height: 100vh;
       background: var(--bg);
-      color: var(--fg);
+      color: var(--text);
       font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       line-height: 1.45;
     }
     main {
-      width: min(980px, calc(100% - 32px));
+      width: min(1120px, calc(100% - 32px));
       margin: 0 auto;
-      padding: 40px 0;
+      padding: 28px 0 24px;
     }
-    header {
+    .header {
       display: flex;
       align-items: flex-end;
       justify-content: space-between;
-      gap: 20px;
-      padding-bottom: 22px;
-      border-bottom: 1px solid var(--line);
+      gap: 22px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-main {
+      min-width: 0;
     }
     h1 {
       margin: 0 0 6px;
+      overflow-wrap: anywhere;
       font-size: clamp(2rem, 4vw, 3.25rem);
       line-height: 1;
       letter-spacing: 0;
     }
-    .subtitle, .meta {
+    .subtitle, .meta, .footer-note {
       color: var(--muted);
       font-size: 0.95rem;
     }
-    .status {
-      color: var(--good);
-      font-weight: 700;
-      white-space: nowrap;
-    }
-    .grid {
+    .header-side {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      justify-items: end;
+      gap: 12px;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    button {
+      min-width: 44px;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+    }
+    button:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      transform: translateY(-1px);
+    }
+    button[aria-pressed="true"] {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    .status-box {
+      display: grid;
+      gap: 3px;
+      color: var(--muted);
+      text-align: right;
+      font-size: 0.92rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .status-line {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      color: var(--text);
+      font-weight: 800;
+    }
+    #live-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--good);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 18%, transparent);
+    }
+    #live-dot[data-status="stale"] {
+      background: var(--warn);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--warn) 18%, transparent);
+    }
+    #live-dot[data-status="error"] {
+      background: var(--bad);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--bad) 18%, transparent);
+    }
+    .cards, .chart-grid {
+      display: grid;
       gap: 14px;
+    }
+    .cards {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin-top: 20px;
+    }
+    .chart-section {
       margin-top: 22px;
     }
-    section {
+    .section-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+    .chart-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    section, .chart-card {
       min-width: 0;
       background: var(--panel);
-      border: 1px solid var(--line);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    section {
+      padding: 15px;
+    }
+    .chart-card {
+      padding: 14px;
     }
     h2 {
       margin: 0 0 14px;
@@ -96,9 +190,12 @@ func renderHTML(cfg Config) string {
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
+    .section-title h2 {
+      margin: 0;
+    }
     dl {
       display: grid;
-      gap: 12px;
+      gap: 11px;
       margin: 0;
     }
     .row {
@@ -106,7 +203,7 @@ func renderHTML(cfg Config) string {
       align-items: baseline;
       justify-content: space-between;
       gap: 14px;
-      min-height: 28px;
+      min-height: 27px;
     }
     dt {
       color: var(--muted);
@@ -117,85 +214,314 @@ func renderHTML(cfg Config) string {
       overflow-wrap: anywhere;
       text-align: right;
       font-variant-numeric: tabular-nums;
-      font-weight: 700;
+      font-weight: 800;
     }
-    @media (max-width: 820px) {
-      header {
-        display: block;
-      }
-      .meta {
-        margin-top: 14px;
-      }
-      .grid {
+    .chart-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 9px;
+      font-size: 0.92rem;
+      font-weight: 800;
+    }
+    .chart-legend {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-align: right;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 150px;
+      border-radius: 6px;
+      background: var(--panel-soft);
+    }
+    .footer-note {
+      margin-top: 18px;
+      text-align: center;
+    }
+    @media (max-width: 980px) {
+      .cards {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
-    @media (max-width: 560px) {
+    @media (max-width: 760px) {
       main {
-        width: min(100% - 24px, 980px);
-        padding: 24px 0;
+        width: min(100% - 24px, 1120px);
+        padding-top: 22px;
       }
-      .grid {
+      .header {
+        align-items: stretch;
+        flex-direction: column;
+      }
+      .header-side, .status-box {
+        justify-items: start;
+        text-align: left;
+      }
+      .controls, .status-line {
+        justify-content: flex-start;
+      }
+      .chart-grid {
         grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 560px) {
+      .cards {
+        grid-template-columns: 1fr;
+      }
+      .section-title {
+        display: block;
+      }
+      .footer-note {
+        text-align: left;
       }
     }
   </style>
 </head>
 <body>
   <main>
-    <header>
-      <div>
+    <header class="header">
+      <div class="header-main">
         <h1>{{TITLE}}</h1>
-        <div class="subtitle">Real-time Go service status</div>
+        <div class="subtitle" data-i18n="subtitle">Real-time Go service status</div>
       </div>
-      <div class="meta">
-        <div><span class="status" id="status">LIVE</span></div>
-        <div>Updated: <span id="updated">-</span></div>
-        <div>Response: <span id="response">-</span></div>
+      <div class="header-side">
+        <div class="controls" aria-label="Display preferences">
+          <button type="button" data-lang="en">EN</button>
+          <button type="button" data-lang="zh-CN">中</button>
+          <button type="button" id="theme-toggle">Auto</button>
+        </div>
+        <div class="status-box">
+          <div class="status-line">
+            <span id="live-dot" data-status="live"></span>
+            <span id="live-text" data-i18n="live">LIVE</span>
+          </div>
+          <div><span data-i18n="updated">Updated</span>: <span id="updated-at">-</span></div>
+          <div><span data-i18n="response">Response</span>: <span id="response-time">-</span></div>
+        </div>
       </div>
     </header>
 
-    <div class="grid">
+    <div class="cards">
       <section>
-        <h2>Process</h2>
+        <h2 data-i18n="process">Process</h2>
         <dl>
-          <div class="row"><dt>CPU</dt><dd id="pid-cpu">-</dd></div>
-          <div class="row"><dt>RSS</dt><dd id="pid-rss">-</dd></div>
+          <div class="row"><dt data-i18n="cpu">CPU</dt><dd id="pid-cpu">-</dd></div>
+          <div class="row"><dt data-i18n="rss">RSS</dt><dd id="pid-rss">-</dd></div>
         </dl>
       </section>
       <section>
-        <h2>Runtime</h2>
+        <h2 data-i18n="runtime">Runtime</h2>
         <dl>
-          <div class="row"><dt>Goroutines</dt><dd id="rt-goroutines">-</dd></div>
-          <div class="row"><dt>Heap Alloc</dt><dd id="rt-heap-alloc">-</dd></div>
-          <div class="row"><dt>Heap Sys</dt><dd id="rt-heap-sys">-</dd></div>
-          <div class="row"><dt>GC Count</dt><dd id="rt-gc">-</dd></div>
-          <div class="row"><dt>Uptime</dt><dd id="rt-uptime">-</dd></div>
+          <div class="row"><dt data-i18n="goroutines">Goroutines</dt><dd id="rt-goroutines">-</dd></div>
+          <div class="row"><dt data-i18n="heapAlloc">Heap Alloc</dt><dd id="rt-heap-alloc">-</dd></div>
+          <div class="row"><dt data-i18n="heapSys">Heap Sys</dt><dd id="rt-heap-sys">-</dd></div>
+          <div class="row"><dt data-i18n="gcCount">GC Count</dt><dd id="rt-gc">-</dd></div>
+          <div class="row"><dt data-i18n="uptime">Uptime</dt><dd id="rt-uptime">-</dd></div>
         </dl>
       </section>
       <section>
-        <h2>System</h2>
+        <h2 data-i18n="system">System</h2>
         <dl>
-          <div class="row"><dt>CPU</dt><dd id="os-cpu">-</dd></div>
-          <div class="row"><dt>Memory</dt><dd id="os-memory">-</dd></div>
-          <div class="row"><dt>Total RAM</dt><dd id="os-total">-</dd></div>
-          <div class="row"><dt>Load1</dt><dd id="os-load">-</dd></div>
+          <div class="row"><dt data-i18n="cpu">CPU</dt><dd id="os-cpu">-</dd></div>
+          <div class="row"><dt data-i18n="memory">Memory</dt><dd id="os-memory">-</dd></div>
+          <div class="row"><dt data-i18n="totalRam">Total RAM</dt><dd id="os-total">-</dd></div>
+          <div class="row"><dt data-i18n="load1">Load1</dt><dd id="os-load">-</dd></div>
         </dl>
       </section>
       <section>
-        <h2>HTTP</h2>
+        <h2 data-i18n="http">HTTP</h2>
         <dl>
-          <div class="row"><dt>Requests</dt><dd id="http-requests">-</dd></div>
+          <div class="row"><dt data-i18n="requests">Requests</dt><dd id="http-requests">-</dd></div>
         </dl>
       </section>
     </div>
+
+    <div class="chart-section">
+      <div class="section-title">
+        <h2 data-i18n="trends">Trends</h2>
+        <div class="meta" data-i18n="chartWindow">Last 60 samples</div>
+      </div>
+      <div class="chart-grid">
+        <article class="chart-card">
+          <div class="chart-head">
+            <span data-i18n="cpuTrend">CPU</span>
+            <span class="chart-legend">PID / OS</span>
+          </div>
+          <canvas id="cpu-chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <div class="chart-head">
+            <span data-i18n="memoryTrend">Memory</span>
+            <span class="chart-legend">RSS / Heap</span>
+          </div>
+          <canvas id="memory-chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <div class="chart-head">
+            <span data-i18n="goroutineTrend">Goroutines</span>
+          </div>
+          <canvas id="goroutine-chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <div class="chart-head">
+            <span data-i18n="requestTrend">Requests / interval</span>
+          </div>
+          <canvas id="request-chart"></canvas>
+        </article>
+      </div>
+    </div>
+
+    <div class="footer-note" data-i18n="jsonNote">JSON via Accept: application/json · in-browser history only</div>
   </main>
 
   <script>
     const refreshMS = {{REFRESH_MS}};
+    const maxPoints = 60;
     const $ = (id) => document.getElementById(id);
     const nf = new Intl.NumberFormat();
+    const messages = {
+      en: {
+        subtitle: "Real-time Go service status",
+        live: "LIVE",
+        stale: "STALE",
+        error: "ERROR",
+        updated: "Updated",
+        response: "Response",
+        process: "Process",
+        runtime: "Runtime",
+        system: "System",
+        http: "HTTP",
+        cpu: "CPU",
+        rss: "RSS",
+        goroutines: "Goroutines",
+        heapAlloc: "Heap Alloc",
+        heapSys: "Heap Sys",
+        gcCount: "GC Count",
+        uptime: "Uptime",
+        memory: "Memory",
+        totalRam: "Total RAM",
+        load1: "Load1",
+        requests: "Requests",
+        trends: "Trends",
+        chartWindow: "Last 60 samples",
+        cpuTrend: "CPU",
+        memoryTrend: "Memory",
+        goroutineTrend: "Goroutines",
+        requestTrend: "Requests / interval",
+        jsonNote: "JSON via Accept: application/json · in-browser history only",
+        themeAuto: "Auto",
+        themeLight: "Light",
+        themeDark: "Dark"
+      },
+      "zh-CN": {
+        subtitle: "实时 Go 服务状态",
+        live: "运行中",
+        stale: "已延迟",
+        error: "错误",
+        updated: "更新于",
+        response: "响应耗时",
+        process: "进程",
+        runtime: "运行时",
+        system: "系统",
+        http: "HTTP",
+        cpu: "CPU",
+        rss: "RSS",
+        goroutines: "Goroutine",
+        heapAlloc: "堆分配",
+        heapSys: "堆系统",
+        gcCount: "GC 次数",
+        uptime: "运行时间",
+        memory: "内存",
+        totalRam: "总内存",
+        load1: "Load1",
+        requests: "请求数",
+        trends: "趋势",
+        chartWindow: "最近 60 个采样点",
+        cpuTrend: "CPU",
+        memoryTrend: "内存",
+        goroutineTrend: "Goroutine",
+        requestTrend: "区间请求数",
+        jsonNote: "通过 Accept: application/json 获取 JSON · 历史仅保存在浏览器内",
+        themeAuto: "自动",
+        themeLight: "亮色",
+        themeDark: "暗色"
+      }
+    };
+    const history = {
+      labels: [],
+      pidCPU: [],
+      osCPU: [],
+      rssMiB: [],
+      heapMiB: [],
+      goroutines: [],
+      requestsDelta: []
+    };
+    let previousSnapshot = null;
+    let currentThemeMode = "auto";
+    let currentLang = "en";
+    let currentStatus = "live";
+    let lastSuccessAt = 0;
 
+    function storageGet(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch (err) {
+        return "";
+      }
+    }
+    function storageSet(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch (err) {}
+    }
+    function detectLang() {
+      const saved = storageGet("monitor.lang");
+      if (saved === "en" || saved === "zh-CN") return saved;
+      return navigator.language && navigator.language.indexOf("zh") === 0 ? "zh-CN" : "en";
+    }
+    function t(key) {
+      return (messages[currentLang] && messages[currentLang][key]) || messages.en[key] || key;
+    }
+    function applyLang(lang) {
+      currentLang = lang === "zh-CN" ? "zh-CN" : "en";
+      storageSet("monitor.lang", currentLang);
+      document.documentElement.lang = currentLang;
+      document.querySelectorAll("[data-i18n]").forEach(function(el) {
+        el.textContent = t(el.dataset.i18n);
+      });
+      document.querySelectorAll("[data-lang]").forEach(function(button) {
+        button.setAttribute("aria-pressed", String(button.dataset.lang === currentLang));
+      });
+      updateThemeButtonText();
+      setStatus(currentStatus);
+    }
+    function resolveTheme(mode) {
+      if (mode === "light" || mode === "dark") return mode;
+      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    function applyTheme(mode) {
+      if (mode !== "light" && mode !== "dark") mode = "auto";
+      currentThemeMode = mode;
+      document.documentElement.dataset.theme = resolveTheme(mode);
+      storageSet("monitor.theme", mode);
+      updateThemeButtonText();
+      renderCharts();
+    }
+    function updateThemeButtonText() {
+      const key = currentThemeMode === "light" ? "themeLight" : currentThemeMode === "dark" ? "themeDark" : "themeAuto";
+      $("theme-toggle").textContent = t(key);
+    }
+    function nextTheme() {
+      applyTheme(currentThemeMode === "auto" ? "light" : currentThemeMode === "light" ? "dark" : "auto");
+    }
+    function setStatus(status) {
+      currentStatus = status;
+      $("live-text").textContent = t(status);
+      $("live-dot").dataset.status = status;
+    }
     function pct(v) {
       return Number(v || 0).toFixed(1) + "%";
     }
@@ -209,6 +535,9 @@ func renderHTML(cfg Config) string {
       }
       return n.toFixed(i === 0 ? 0 : 1) + " " + units[i];
     }
+    function bytesToMiB(v) {
+      return Number(v || 0) / 1024 / 1024;
+    }
     function uptime(seconds) {
       let s = Math.max(0, Number(seconds || 0));
       const d = Math.floor(s / 86400); s %= 86400;
@@ -221,30 +550,183 @@ func renderHTML(cfg Config) string {
       parts.push(Math.floor(s % 60) + "s");
       return parts.join(" ");
     }
+    function formatShort(v) {
+      const n = Number(v || 0);
+      if (Math.abs(n) >= 1000000) return (n / 1000000).toFixed(1) + "M";
+      if (Math.abs(n) >= 1000) return (n / 1000).toFixed(1) + "k";
+      if (Math.abs(n) >= 10) return n.toFixed(0);
+      return n.toFixed(1);
+    }
+    function cssVar(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+    function renderSnapshot(data, elapsed) {
+      $("pid-cpu").textContent = pct(data.pid.cpu_percent);
+      $("pid-rss").textContent = bytes(data.pid.rss_bytes);
+      $("rt-goroutines").textContent = nf.format(data.runtime.goroutines || 0);
+      $("rt-heap-alloc").textContent = bytes(data.runtime.heap_alloc_bytes);
+      $("rt-heap-sys").textContent = bytes(data.runtime.heap_sys_bytes);
+      $("rt-gc").textContent = nf.format(data.runtime.num_gc || 0);
+      $("rt-uptime").textContent = uptime(data.runtime.uptime_seconds);
+      $("os-cpu").textContent = pct(data.os.cpu_percent);
+      $("os-memory").textContent = pct(data.os.memory_used_percent);
+      $("os-total").textContent = bytes(data.os.memory_total_bytes);
+      $("os-load").textContent = Number(data.os.load1 || 0).toFixed(2);
+      $("http-requests").textContent = nf.format(data.http.total_requests || 0);
+      $("updated-at").textContent = new Date().toLocaleString();
+      $("response-time").textContent = elapsed.toFixed(1) + " ms";
+    }
+    function pushHistory(snapshot) {
+      const requests = snapshot.http.total_requests || 0;
+      const previousRequests = previousSnapshot ? previousSnapshot.http.total_requests || 0 : requests;
+      const delta = Math.max(0, requests - previousRequests);
+
+      history.labels.push(new Date().toLocaleTimeString());
+      history.pidCPU.push(snapshot.pid.cpu_percent || 0);
+      history.osCPU.push(snapshot.os.cpu_percent || 0);
+      history.rssMiB.push(bytesToMiB(snapshot.pid.rss_bytes || 0));
+      history.heapMiB.push(bytesToMiB(snapshot.runtime.heap_alloc_bytes || 0));
+      history.goroutines.push(snapshot.runtime.goroutines || 0);
+      history.requestsDelta.push(delta);
+      Object.keys(history).forEach(function(key) {
+        while (history[key].length > maxPoints) history[key].shift();
+      });
+      previousSnapshot = snapshot;
+    }
+    function drawGrid(ctx, width, height, padding, min, max) {
+      const border = cssVar("--border");
+      const muted = cssVar("--muted");
+      const plotH = height - padding.top - padding.bottom;
+      ctx.strokeStyle = border;
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.55;
+      for (let i = 0; i <= 3; i++) {
+        const y = padding.top + (plotH / 3) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = muted;
+      ctx.font = "11px system-ui, sans-serif";
+      ctx.fillText(formatShort(max), 4, padding.top + 4);
+      ctx.fillText(formatShort(min), 4, height - padding.bottom);
+    }
+    function drawSeries(ctx, data, cfg) {
+      const width = cfg.width;
+      const height = cfg.height;
+      const padding = cfg.padding;
+      const min = cfg.min;
+      const max = cfg.max;
+      const plotW = width - padding.left - padding.right;
+      const plotH = height - padding.top - padding.bottom;
+      if (!data.length) return;
+      ctx.beginPath();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = cfg.color;
+      data.forEach(function(value, i) {
+        const x = padding.left + (data.length === 1 ? plotW : (i / (data.length - 1)) * plotW);
+        const y = padding.top + (1 - (value - min) / (max - min || 1)) * plotH;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+    function drawLineChart(canvas, seriesList, options) {
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(rect.width, 1);
+      const height = Math.max(rect.height, 1);
+      const padding = { top: 12, right: 10, bottom: 18, left: 32 };
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      const values = [];
+      seriesList.forEach(function(series) {
+        series.data.forEach(function(value) {
+          if (Number.isFinite(value)) values.push(value);
+        });
+      });
+      const min = options && Number.isFinite(options.minValue) ? options.minValue : 0;
+      const floorMax = options && Number.isFinite(options.minMax) ? options.minMax : 0;
+      const max = Math.max(floorMax, values.length ? Math.max.apply(null, values) : 1, 1);
+      drawGrid(ctx, width, height, padding, min, max);
+      seriesList.forEach(function(series) {
+        drawSeries(ctx, series.data, {
+          width: width,
+          height: height,
+          padding: padding,
+          min: min,
+          max: max,
+          color: series.color
+        });
+      });
+    }
+    function renderCharts() {
+      const accent = cssVar("--accent");
+      const good = cssVar("--good");
+      const warn = cssVar("--warn");
+      drawLineChart($("cpu-chart"), [
+        { data: history.pidCPU, color: accent },
+        { data: history.osCPU, color: warn }
+      ], { minValue: 0, minMax: 100 });
+      drawLineChart($("memory-chart"), [
+        { data: history.rssMiB, color: accent },
+        { data: history.heapMiB, color: good }
+      ], { minValue: 0 });
+      drawLineChart($("goroutine-chart"), [
+        { data: history.goroutines, color: accent }
+      ], { minValue: 0 });
+      drawLineChart($("request-chart"), [
+        { data: history.requestsDelta, color: accent }
+      ], { minValue: 0 });
+    }
     async function refresh() {
       const started = performance.now();
       try {
-        const res = await fetch(location.pathname, { headers: { Accept: "application/json" } });
+        const res = await fetch(location.href, {
+          headers: { Accept: "application/json" },
+          cache: "no-store"
+        });
+        if (!res.ok) throw new Error("bad status: " + res.status);
         const data = await res.json();
-        $("pid-cpu").textContent = pct(data.pid.cpu_percent);
-        $("pid-rss").textContent = bytes(data.pid.rss_bytes);
-        $("rt-goroutines").textContent = nf.format(data.runtime.goroutines || 0);
-        $("rt-heap-alloc").textContent = bytes(data.runtime.heap_alloc_bytes);
-        $("rt-heap-sys").textContent = bytes(data.runtime.heap_sys_bytes);
-        $("rt-gc").textContent = nf.format(data.runtime.num_gc || 0);
-        $("rt-uptime").textContent = uptime(data.runtime.uptime_seconds);
-        $("os-cpu").textContent = pct(data.os.cpu_percent);
-        $("os-memory").textContent = pct(data.os.memory_used_percent);
-        $("os-total").textContent = bytes(data.os.memory_total_bytes);
-        $("os-load").textContent = Number(data.os.load1 || 0).toFixed(2);
-        $("http-requests").textContent = nf.format(data.http.total_requests || 0);
-        $("updated").textContent = new Date().toLocaleString();
-        $("response").textContent = (performance.now() - started).toFixed(1) + " ms";
-        $("status").textContent = "LIVE";
+        renderSnapshot(data, performance.now() - started);
+        pushHistory(data);
+        renderCharts();
+        lastSuccessAt = Date.now();
+        setStatus("live");
       } catch (err) {
-        $("status").textContent = "OFFLINE";
+        setStatus("error");
       }
     }
+
+    document.querySelectorAll("[data-lang]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        applyLang(button.dataset.lang);
+      });
+    });
+    $("theme-toggle").addEventListener("click", nextTheme);
+    if (window.matchMedia) {
+      const themeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      const onThemeChange = function() {
+        if (currentThemeMode === "auto") applyTheme("auto");
+      };
+      if (themeQuery.addEventListener) themeQuery.addEventListener("change", onThemeChange);
+      else if (themeQuery.addListener) themeQuery.addListener(onThemeChange);
+    }
+    window.addEventListener("resize", renderCharts);
+    setInterval(function() {
+      if (!lastSuccessAt || currentStatus === "error") return;
+      if (Date.now() - lastSuccessAt > refreshMS * 3) setStatus("stale");
+    }, 1000);
+
+    currentLang = detectLang();
+    applyTheme(storageGet("monitor.theme") || "auto");
+    applyLang(currentLang);
     refresh();
     setInterval(refresh, refreshMS);
   </script>

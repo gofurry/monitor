@@ -119,6 +119,32 @@ func TestMonitorServesHTMLByDefault(t *testing.T) {
 	assertMonitorHeaders(t, rec)
 }
 
+func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
+	m := NewMonitor(http.NotFoundHandler(), Config{Refresh: time.Hour})
+	defer m.Stop()
+
+	rec := httptest.NewRecorder()
+	m.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/monitor", nil))
+
+	body := rec.Body.String()
+	for _, want := range []string{
+		`data-lang="zh-CN"`,
+		`id="theme-toggle"`,
+		`data-status="live"`,
+		`id="cpu-chart"`,
+		`id="memory-chart"`,
+		`id="goroutine-chart"`,
+		`id="request-chart"`,
+		`storageSet("monitor.theme"`,
+		`storageSet("monitor.lang"`,
+		`getContext("2d")`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("HTML body does not contain %q", want)
+		}
+	}
+}
+
 func TestAPIOnlyServesJSONWithoutAcceptHeader(t *testing.T) {
 	m := NewMonitor(http.NotFoundHandler(), Config{
 		APIOnly: true,

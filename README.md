@@ -15,6 +15,18 @@ A tiny `net/http` middleware for real-time Go service status.
 
 `monitor` is intentionally small: one middleware, one page, one JSON snapshot.
 
+The status page is fully embedded and requires no frontend build step or external JavaScript libraries.
+
+It includes:
+
+- light / dark / auto theme
+- English and Simplified Chinese UI
+- LIVE / STALE / ERROR status
+- small in-browser trend charts powered by native Canvas
+- JSON snapshot via `Accept: application/json`
+
+Charts keep only short in-browser history. Metrics are not stored server-side.
+
 ## Installation
 
 ```sh
@@ -91,6 +103,9 @@ Requests to `Path` are always excluded from `http.total_requests`; the monitor p
 - show Go runtime metrics
 - show basic system metrics
 - count total business requests
+- render short in-browser trend charts without external chart libraries
+- support light / dark / auto theme
+- support English and Simplified Chinese UI
 
 `monitor` does not:
 
@@ -100,6 +115,9 @@ Requests to `Path` are always excluded from `http.total_requests`; the monitor p
 - provide tracing
 - aggregate multiple instances
 - collect application-specific business metrics
+- store chart history server-side
+- depend on external charting libraries
+- provide configurable alert thresholds
 
 ## JSON Snapshot
 
