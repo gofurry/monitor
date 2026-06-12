@@ -11,6 +11,15 @@ import (
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+
+		a := 1
+		for {
+			a += 1
+			if a > 100000000 {
+				break
+			}
+		}
+
 		_, _ = w.Write([]byte("hello"))
 	})
 
