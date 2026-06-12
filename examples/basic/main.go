@@ -36,7 +36,9 @@ func main() {
 		Description:         "Live process, runtime, system, and HTTP metrics for this Go service.",
 		DefaultLanguage:     "en",
 		DefaultSampleWindow: 60,
-		Refresh:             2 * time.Second,
+		DiskPaths:           nil, // "nil" represents the observation of only the services currently deployed.
+		// DiskPaths:           []string{"C:\\", "D:\\"},
+		Refresh: 2 * time.Second,
 	})
 
 	log.Println("listening on http://localhost:18848")
