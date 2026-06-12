@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{{ .Description }}">
+  <title>{{ .Title }}</title>
+  <style>{{ .CSS }}</style>
+</head>
+<body>
+  <main>
+    <header class="header">
+      <div class="header-main">
+        <h1>{{ .Title }}</h1>
+      </div>
+      <div class="header-side">
+        <div class="status-box">
+          <span class="status-controls" aria-label="Display preferences">
+            <button type="button" id="lang-toggle" class="control-dot" title="Language"><span class="visually-hidden">Language</span></button>
+            <button type="button" id="theme-toggle" class="control-dot" title="Theme"><span class="visually-hidden">Theme</span></button>
+          </span>
+          <div class="status-line">
+            <span class="status-state">
+              <span id="live-dot" data-status="live"></span>
+              <span id="live-text" data-i18n="live">LIVE</span>
+            </span>
+          </div>
+          <span id="updated-at">-</span>
+          <span id="response-time">-</span>
+        </div>
+      </div>
+    </header>
+    <div class="header-divider" aria-hidden="true"></div>
+    <aside class="description-card" aria-label="Page description">
+      <p>{{ .Description }}</p>
+    </aside>
+
+    <div class="cards">
+      <section class="metric-card">
+        <div class="metric-card__head">
+          <h2 data-i18n="process">Process</h2>
+          <div class="metric-pager" hidden>
+            <button type="button" class="metric-pager__prev" aria-label="Previous metric page">&lt;</button>
+            <span class="metric-pager__status">1 / 1</span>
+            <button type="button" class="metric-pager__next" aria-label="Next metric page">&gt;</button>
+          </div>
+        </div>
+        <dl>
+          <div class="row"><dt data-i18n="cpu">CPU</dt><dd id="pid-cpu">-</dd></div>
+          <div class="row"><dt data-i18n="rss">RSS</dt><dd id="pid-rss">-</dd></div>
+          <div class="row"><dt data-i18n="threads">Threads</dt><dd id="pid-threads">-</dd></div>
+          <div class="row"><dt data-i18n="pid">PID</dt><dd id="pid-id">-</dd></div>
+          <div class="row"><dt data-i18n="fds">FDs</dt><dd id="pid-fds">-</dd></div>
+        </dl>
+      </section>
+      <section class="metric-card">
+        <div class="metric-card__head">
+          <h2 data-i18n="runtime">Runtime</h2>
+          <div class="metric-pager" hidden>
+            <button type="button" class="metric-pager__prev" aria-label="Previous metric page">&lt;</button>
+            <span class="metric-pager__status">1 / 1</span>
+            <button type="button" class="metric-pager__next" aria-label="Next metric page">&gt;</button>
+          </div>
+        </div>
+        <dl>
+          <div class="row"><dt data-i18n="goroutines">Goroutines</dt><dd id="rt-goroutines">-</dd></div>
+          <div class="row"><dt data-i18n="heap">Heap</dt><dd><button type="button" id="heap-details-button" class="metric-action">-</button></dd></div>
+          <div class="row"><dt data-i18n="nextGC">Next GC</dt><dd id="rt-next-gc">-</dd></div>
+          <div class="row"><dt data-i18n="gc">GC</dt><dd><button type="button" id="gc-details-button" class="metric-action">-</button></dd></div>
+          <div class="row"><dt data-i18n="uptime">Uptime</dt><dd id="rt-uptime">-</dd></div>
+        </dl>
+      </section>
+      <section class="metric-card">
+        <div class="metric-card__head">
+          <h2 data-i18n="system">System</h2>
+          <div class="metric-pager" hidden>
+            <button type="button" class="metric-pager__prev" aria-label="Previous metric page">&lt;</button>
+            <span class="metric-pager__status">1 / 1</span>
+            <button type="button" class="metric-pager__next" aria-label="Next metric page">&gt;</button>
+          </div>
+        </div>
+        <dl>
+          <div class="row"><dt data-i18n="cpu">CPU</dt><dd id="os-cpu">-</dd></div>
+          <div class="row"><dt data-i18n="memory">Memory</dt><dd id="os-memory">-</dd></div>
+          <div class="row"><dt data-i18n="totalRam">Total RAM</dt><dd id="os-total">-</dd></div>
+          <div class="row"><dt data-i18n="disk">Disk</dt><dd><button type="button" id="disk-details-button" class="metric-action">-</button></dd></div>
+          <div class="row"><dt data-i18n="load1">Load1</dt><dd id="os-load">-</dd></div>
+        </dl>
+      </section>
+      <section class="metric-card">
+        <div class="metric-card__head">
+          <h2 data-i18n="http">HTTP</h2>
+          <div class="metric-pager" hidden>
+            <button type="button" class="metric-pager__prev" aria-label="Previous metric page">&lt;</button>
+            <span class="metric-pager__status">1 / 1</span>
+            <button type="button" class="metric-pager__next" aria-label="Next metric page">&gt;</button>
+          </div>
+        </div>
+        <dl>
+          <div class="row"><dt data-i18n="requests">Requests</dt><dd id="http-requests">-</dd></div>
+          <div class="row"><dt data-i18n="inFlight">In-flight</dt><dd id="http-in-flight">-</dd></div>
+          <div class="row"><dt data-i18n="recentLatency">Recent latency</dt><dd id="http-latency-recent">-</dd></div>
+          <div class="row"><dt data-i18n="maxLatency">Max latency</dt><dd id="http-latency-max">-</dd></div>
+          <div class="row"><dt data-i18n="statusCodes">Status codes</dt><dd><button type="button" id="http-status-button" class="metric-action">-</button></dd></div>
+        </dl>
+      </section>
+    </div>
+
+    <div class="chart-section">
+      <div class="section-title">
+        <h2 data-i18n="trends">Trends</h2>
+        <div class="sample-toggle" role="group" aria-label="Chart sample window">
+          <button type="button" class="sample-option" data-samples="30" aria-pressed="{{ .Samples30Pressed }}">30</button>
+          <button type="button" class="sample-option" data-samples="60" aria-pressed="{{ .Samples60Pressed }}">60</button>
+          <button type="button" class="sample-option" data-samples="90" aria-pressed="{{ .Samples90Pressed }}">90</button>
+        </div>
+      </div>
+      <div class="chart-grid">
+        <article class="chart-card">
+          <div class="chart-head">
+            <span data-i18n="cpuTrend">CPU</span>
+            <span class="chart-legend legend-list">
+              <span class="legend-item"><span class="legend-dot" data-series="pid"></span>PID</span>
+              <span class="legend-item"><span class="legend-dot" data-series="os"></span>OS</span>
+            </span>
+          </div>
+          <canvas id="cpu-chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <div class="chart-head">
+            <span data-i18n="memoryTrend">Memory</span>
+            <span class="chart-legend legend-list">
+              <span class="legend-item"><span class="legend-dot" data-series="rss"></span>RSS</span>
+              <span class="legend-item"><span class="legend-dot" data-series="heap"></span>Heap</span>
+            </span>
+          </div>
+          <canvas id="memory-chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <div class="chart-head">
+            <span data-i18n="heapGCTrend">Heap / Next GC</span>
+            <span class="chart-legend legend-list">
+              <span class="legend-item"><span class="legend-dot" data-series="heap"></span><span data-i18n="heapAlloc">Heap Alloc</span></span>
+              <span class="legend-item"><span class="legend-dot" data-series="nextgc"></span><span data-i18n="nextGC">Next GC</span></span>
+            </span>
+          </div>
+          <canvas id="heap-gc-chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <div class="chart-head">
+            <span data-i18n="goroutineTrend">Goroutines</span>
+            <span class="chart-legend legend-list">
+              <span class="legend-item"><span class="legend-dot" data-series="main"></span>Count</span>
+            </span>
+          </div>
+          <canvas id="goroutine-chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <div class="chart-head">
+            <span data-i18n="requestTrend">Requests / interval</span>
+            <span class="chart-legend legend-list">
+              <span class="legend-item"><span class="legend-dot" data-series="main"></span>Req</span>
+            </span>
+          </div>
+          <canvas id="request-chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <div class="chart-head">
+            <span data-i18n="latencyTrend">HTTP latency</span>
+            <span class="chart-legend legend-list">
+              <span class="legend-item"><span class="legend-dot" data-series="recent"></span><span data-i18n="recent">Recent</span></span>
+              <span class="legend-item"><span class="legend-dot" data-series="max"></span><span data-i18n="max">Max</span></span>
+            </span>
+          </div>
+          <canvas id="latency-chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <div class="chart-head">
+            <span data-i18n="inFlightTrend">In-flight</span>
+            <span class="chart-legend legend-list">
+              <span class="legend-item"><span class="legend-dot" data-series="main"></span><span data-i18n="active">Active</span></span>
+            </span>
+          </div>
+          <canvas id="in-flight-chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <div class="chart-head">
+            <span data-i18n="gcPauseTrend">GC pause</span>
+            <span class="chart-legend legend-list">
+              <span class="legend-item"><span class="legend-dot" data-series="window"></span><span data-i18n="window">Window</span></span>
+              <span class="legend-item"><span class="legend-dot" data-series="last"></span><span data-i18n="last">Last</span></span>
+            </span>
+          </div>
+          <canvas id="gc-pause-chart"></canvas>
+        </article>
+      </div>
+    </div>
+    <footer>{{ .Footer }}</footer>
+  </main>
+  <button id="page-scroll-dock" class="page-scroll-dock" type="button" title="Scroll up" aria-label="Scroll progress 0%" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <span id="page-scroll-dock-value" class="page-scroll-dock__core">0%</span>
+  </button>
+  <div id="disk-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="disk-modal-title" hidden>
+    <div class="modal__panel">
+      <div class="modal__head">
+        <h2 id="disk-modal-title" data-i18n="diskDetailsTitle">Disk Details</h2>
+        <button type="button" id="disk-modal-close" class="modal__close" aria-label="Close">x</button>
+      </div>
+      <div id="disk-modal-list" class="disk-list"></div>
+    </div>
+  </div>
+  <div id="heap-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="heap-modal-title" hidden>
+    <div class="modal__panel">
+      <div class="modal__head">
+        <h2 id="heap-modal-title" data-i18n="heapDetailsTitle">Heap Details</h2>
+        <button type="button" id="heap-modal-close" class="modal__close" aria-label="Close">x</button>
+      </div>
+      <dl id="heap-modal-list" class="detail-list"></dl>
+    </div>
+  </div>
+  <div id="gc-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="gc-modal-title" hidden>
+    <div class="modal__panel">
+      <div class="modal__head">
+        <h2 id="gc-modal-title" data-i18n="gcDetailsTitle">GC Details</h2>
+        <button type="button" id="gc-modal-close" class="modal__close" aria-label="Close">x</button>
+      </div>
+      <dl id="gc-modal-list" class="detail-list"></dl>
+    </div>
+  </div>
+  <div id="http-status-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="http-status-modal-title" hidden>
+    <div class="modal__panel">
+      <div class="modal__head">
+        <h2 id="http-status-modal-title" data-i18n="statusCodesTitle">HTTP Status Codes</h2>
+        <button type="button" id="http-status-modal-close" class="modal__close" aria-label="Close">x</button>
+      </div>
+      <dl id="http-status-modal-list" class="detail-list"></dl>
+    </div>
+  </div>
+
+  <script>window.monitorConfig = {{ .ConfigJSON }};</script>
+  <script>{{ .JS }}</script>
+</body>
+</html>
