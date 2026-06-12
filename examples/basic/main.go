@@ -3,18 +3,24 @@ package main
 import (
 	"log"
 	"net/http"
+	"runtime/debug"
 	"time"
 
 	"github.com/gofurry/monitor"
 )
 
 func main() {
+
+	// Increase the GC frequency
+	debug.SetGCPercent(10)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
+		// Increase the request delay to make it easier to observe.
 		a := 1
 		for {
-			a += 1
+			a++
 			if a > 100000000 {
 				break
 			}
