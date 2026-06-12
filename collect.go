@@ -14,7 +14,7 @@ import (
 func (m *Monitor) collectOnce() {
 	stats := Stats{
 		PID:     collectPID(m.proc),
-		Runtime: collectRuntime(m.startedAt),
+		Runtime: m.collectRuntime(),
 		OS:      collectOS(),
 		HTTP:    m.collectHTTP(),
 	}
@@ -57,22 +57,39 @@ func collectPID(proc *process.Process) PIDStats {
 	return stats
 }
 
-func collectRuntime(startedAt time.Time) RuntimeStats {
+func (m *Monitor) collectRuntime() RuntimeStats {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 
-	uptime := time.Since(startedAt)
+	uptime := time.Since(m.startedAt)
 	if uptime < 0 {
 		uptime = 0
 	}
+	pauseTotal := ms.PauseTotalNs
+	pausePrevious := m.gcPauseTotal.Swap(pauseTotal)
+	pauseRecent := uint64(0)
+	if m.gcPauseSeen.Swap(true) && pauseTotal >= pausePrevious {
+		pauseRecent = pauseTotal - pausePrevious
+	}
 
 	return RuntimeStats{
-		Goroutines:     runtime.NumGoroutine(),
-		HeapAllocBytes: ms.HeapAlloc,
-		HeapSysBytes:   ms.HeapSys,
-		NumGC:          ms.NumGC,
-		UptimeSeconds:  uint64(uptime.Seconds()),
+		Goroutines:      runtime.NumGoroutine(),
+		HeapAllocBytes:  ms.HeapAlloc,
+		HeapSysBytes:    ms.HeapSys,
+		NumGC:           ms.NumGC,
+		GCPauseLastNS:   lastGCPauseNS(ms),
+		GCPauseTotalNS:  pauseTotal,
+		GCPauseRecentNS: pauseRecent,
+		UptimeSeconds:   uint64(uptime.Seconds()),
 	}
+}
+
+func lastGCPauseNS(ms runtime.MemStats) uint64 {
+	if ms.NumGC == 0 {
+		return 0
+	}
+	index := (ms.NumGC + uint32(len(ms.PauseNs)) - 1) % uint32(len(ms.PauseNs))
+	return ms.PauseNs[index]
 }
 
 func collectOS() OSStats {

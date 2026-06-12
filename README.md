@@ -108,7 +108,7 @@ Requests to `Path` are always excluded from `http.total_requests`; the monitor p
 - expose a lightweight status page
 - expose a JSON snapshot
 - show current process metrics
-- show Go runtime metrics
+- show Go runtime metrics, including GC pause timing
 - show basic system metrics
 - count total business requests
 - track in-flight business requests, HTTP status code classes, and recent request latency
@@ -141,6 +141,9 @@ Requests to `Path` are always excluded from `http.total_requests`; the monitor p
     "heap_alloc_bytes": 7327744,
     "heap_sys_bytes": 12582912,
     "num_gc": 12,
+    "gc_pause_last_ns": 128000,
+    "gc_pause_total_ns": 3200000,
+    "gc_pause_recent_ns": 128000,
     "uptime_seconds": 3600
   },
   "os": {

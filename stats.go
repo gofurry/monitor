@@ -17,11 +17,14 @@ type PIDStats struct {
 
 // RuntimeStats describes the Go runtime in the current process.
 type RuntimeStats struct {
-	Goroutines     int    `json:"goroutines"`
-	HeapAllocBytes uint64 `json:"heap_alloc_bytes"`
-	HeapSysBytes   uint64 `json:"heap_sys_bytes"`
-	NumGC          uint32 `json:"num_gc"`
-	UptimeSeconds  uint64 `json:"uptime_seconds"`
+	Goroutines      int    `json:"goroutines"`
+	HeapAllocBytes  uint64 `json:"heap_alloc_bytes"`
+	HeapSysBytes    uint64 `json:"heap_sys_bytes"`
+	NumGC           uint32 `json:"num_gc"`
+	GCPauseLastNS   uint64 `json:"gc_pause_last_ns"`
+	GCPauseTotalNS  uint64 `json:"gc_pause_total_ns"`
+	GCPauseRecentNS uint64 `json:"gc_pause_recent_ns"`
+	UptimeSeconds   uint64 `json:"uptime_seconds"`
 }
 
 // OSStats describes the host operating system.

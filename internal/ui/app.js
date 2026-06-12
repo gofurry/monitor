@@ -20,6 +20,9 @@
         heapAlloc: "Heap Alloc",
         heapSys: "Heap Sys",
         gcCount: "GC Count",
+        gcPauseLast: "GC pause last",
+        gcPauseRecent: "GC pause window",
+        gcPauseTotal: "GC pause total",
         uptime: "Uptime",
         memory: "Memory",
         totalRam: "Total RAM",
@@ -52,6 +55,9 @@
         heapAlloc: "堆分配",
         heapSys: "堆系统",
         gcCount: "GC 次数",
+        gcPauseLast: "最近 GC 暂停",
+        gcPauseRecent: "窗口 GC 暂停",
+        gcPauseTotal: "累计 GC 暂停",
         uptime: "运行时间",
         memory: "内存",
         totalRam: "总内存",
@@ -244,6 +250,9 @@
       $("rt-heap-alloc").textContent = bytes(data.runtime.heap_alloc_bytes);
       $("rt-heap-sys").textContent = bytes(data.runtime.heap_sys_bytes);
       $("rt-gc").textContent = nf.format(data.runtime.num_gc || 0);
+      $("rt-gc-pause-last").textContent = durationNS(data.runtime.gc_pause_last_ns);
+      $("rt-gc-pause-recent").textContent = durationNS(data.runtime.gc_pause_recent_ns);
+      $("rt-gc-pause-total").textContent = durationNS(data.runtime.gc_pause_total_ns);
       $("rt-uptime").textContent = uptime(data.runtime.uptime_seconds);
       $("os-cpu").textContent = pct(data.os.cpu_percent);
       $("os-memory").textContent = pct(data.os.memory_used_percent);

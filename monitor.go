@@ -37,6 +37,8 @@ type Monitor struct {
 	latencyLastNS atomic.Uint64
 	latencyRecent atomic.Uint64
 	latencyMaxNS  atomic.Uint64
+	gcPauseTotal  atomic.Uint64
+	gcPauseSeen   atomic.Bool
 	snapshot      atomic.Value // stores Stats
 
 	stopOnce sync.Once

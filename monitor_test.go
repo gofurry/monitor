@@ -202,6 +202,22 @@ func TestMonitorRecordsMinimumNanosecondLatency(t *testing.T) {
 	}
 }
 
+func TestMonitorCollectsGCPauseStats(t *testing.T) {
+	m := NewMonitor(http.NotFoundHandler(), Config{Refresh: time.Hour})
+	defer m.Stop()
+
+	m.gcPauseTotal.Store(0)
+	m.gcPauseSeen.Store(true)
+
+	stats := m.collectRuntime()
+	if stats.GCPauseRecentNS != stats.GCPauseTotalNS {
+		t.Fatalf("gc pause recent = %d, want %d", stats.GCPauseRecentNS, stats.GCPauseTotalNS)
+	}
+	if stats.NumGC == 0 && stats.GCPauseLastNS != 0 {
+		t.Fatalf("gc pause last = %d, want 0 when no GC has run", stats.GCPauseLastNS)
+	}
+}
+
 func TestMonitorServesHTMLByDefault(t *testing.T) {
 	m := NewMonitor(http.NotFoundHandler(), Config{
 		Title:       "My App",
@@ -297,6 +313,9 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`width: 100%`,
 		`class="sample-toggle"`,
 		`class="sample-option"`,
+		`id="rt-gc-pause-last"`,
+		`id="rt-gc-pause-recent"`,
+		`id="rt-gc-pause-total"`,
 		`id="http-in-flight"`,
 		`id="http-latency-recent"`,
 		`id="http-latency-max"`,
@@ -305,6 +324,9 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`id="http-status-4xx"`,
 		`id="http-status-5xx"`,
 		`in_flight_requests`,
+		`gc_pause_last_ns`,
+		`gc_pause_recent_ns`,
+		`gc_pause_total_ns`,
 		`status_codes`,
 		`recent_ns`,
 		`max_ns`,
