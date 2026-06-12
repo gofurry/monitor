@@ -188,12 +188,24 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`width: 100%`,
 		`class="sample-toggle"`,
 		`class="sample-option"`,
+		`id="page-scroll-dock"`,
+		`class="page-scroll-dock"`,
+		`page-scroll-dock--visible`,
+		`scrollbar-width: none`,
+		`::-webkit-scrollbar`,
+		`function updateScrollOrb`,
+		`function scrollUpQuarter`,
+		`--scroll-progress`,
+		`aria-valuenow`,
 		`data-samples="30"`,
 		`data-samples="60" aria-pressed="true"`,
 		`data-samples="90"`,
+		`window.monitorConfig =`,
 		`const maxPoints = 90`,
-		`const defaultLanguage = "en"`,
-		`const defaultSampleWindow = 60`,
+		`"defaultLanguage":"en"`,
+		`"defaultSampleWindow":60`,
+		`const defaultLanguage = monitorConfig.defaultLanguage`,
+		`const defaultSampleWindow = monitorConfig.defaultSampleWindow`,
 		`let currentLang = defaultLanguage`,
 		`let currentSampleWindow = defaultSampleWindow`,
 		`function applySampleWindow`,
@@ -227,6 +239,7 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`Last 60 samples`,
 		`最近 60 个采样点`,
 		`navigator.language`,
+		"</html>`",
 	} {
 		if strings.Contains(body, unwanted) {
 			t.Fatalf("HTML body contains unwanted %q", unwanted)
@@ -247,8 +260,8 @@ func TestMonitorHTMLUsesConfiguredUIDefaults(t *testing.T) {
 
 	body := rec.Body.String()
 	for _, want := range []string{
-		`const defaultLanguage = "zh-CN"`,
-		`const defaultSampleWindow = 30`,
+		`"defaultLanguage":"zh-CN"`,
+		`"defaultSampleWindow":30`,
 		`data-samples="30" aria-pressed="true"`,
 		`data-samples="60" aria-pressed="false"`,
 		`applySampleWindow(defaultSampleWindow)`,
@@ -353,6 +366,9 @@ func assertMonitorHeaders(t *testing.T, rec *httptest.ResponseRecorder) {
 	t.Helper()
 	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
 		t.Fatalf("Cache-Control = %q, want %q", got, "no-store")
+	}
+	if got := rec.Header().Get("Referrer-Policy"); got != "no-referrer" {
+		t.Fatalf("Referrer-Policy = %q, want %q", got, "no-referrer")
 	}
 	if got := rec.Header().Get("X-Content-Type-Options"); got != "nosniff" {
 		t.Fatalf("X-Content-Type-Options = %q, want %q", got, "nosniff")

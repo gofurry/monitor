@@ -129,6 +129,7 @@ func (m *Monitor) ignoreRequest(r *http.Request) bool {
 
 func setMonitorHeaders(w http.ResponseWriter) {
 	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Referrer-Policy", "no-referrer")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 }
 

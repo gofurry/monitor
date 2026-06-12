@@ -189,7 +189,7 @@ The benchmark suite covers:
 ## Notes
 
 - Requests to the monitor path are not counted as business requests.
-- The monitor path accepts only `GET` and `HEAD`, and responses use `Cache-Control: no-store`.
+- The monitor path accepts only `GET` and `HEAD`, and responses use `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff`.
 - Metrics are collected in a background ticker and served from the latest race-safe snapshot.
 - Partial metric collection failures leave the affected values at zero instead of making the monitor endpoint fail.
-- The HTML page has no external frontend dependencies.
+- The HTML page has no external frontend dependencies; its template, CSS, and JavaScript are embedded from `internal/ui`.
