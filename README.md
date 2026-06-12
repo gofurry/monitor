@@ -160,6 +160,24 @@ _ = stats
 
 `Monitor` is safe for concurrent use.
 
+## Performance Baseline
+
+Run the benchmark baseline with:
+
+```sh
+go test -run=^$ -bench=Benchmark -benchmem .
+```
+
+The benchmark suite covers:
+
+- direct `net/http` handler overhead
+- monitor-wrapped business requests
+- parallel business requests
+- ignored requests
+- JSON snapshot responses
+- HTML status page responses
+- `Current()` snapshot reads
+
 ## Notes
 
 - Requests to the monitor path are not counted as business requests.
