@@ -24,6 +24,6 @@ func main() {
 		Refresh:             2 * time.Second,
 	})
 
-	log.Println("listening on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", handler))
+	log.Println("listening on http://localhost:18848")
+	log.Fatal(http.ListenAndServe(":18848", handler))
 }
