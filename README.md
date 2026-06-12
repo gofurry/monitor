@@ -1,0 +1,133 @@
+# monitor
+
+A tiny `net/http` middleware for real-time Go service status.
+
+`monitor` is intentionally small: one middleware, one page, one JSON snapshot.
+
+## Installation
+
+```sh
+go get github.com/gofurry/monitor
+```
+
+## Quick Start
+
+```go
+package main
+
+import (
+	"net/http"
+
+	"github.com/gofurry/monitor"
+)
+
+func main() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("hello"))
+	})
+
+	handler := monitor.New(mux)
+	_ = http.ListenAndServe(":8080", handler)
+}
+```
+
+Open:
+
+```text
+http://localhost:8080/monitor
+```
+
+Fetch JSON:
+
+```sh
+curl -H "Accept: application/json" http://localhost:8080/monitor
+```
+
+## Configuration
+
+```go
+handler := monitor.New(mux, monitor.Config{
+	Path:    "/monitor",
+	Title:   "My App Monitor",
+	Refresh: 2 * time.Second,
+	APIOnly: false,
+})
+```
+
+Defaults:
+
+| Field | Default | Description |
+|---|---:|---|
+| `Path` | `/monitor` | Endpoint for the HTML page and JSON snapshot. |
+| `Title` | `Monitor` | HTML page title and heading. |
+| `Refresh` | `2s` | Background metrics collection interval. |
+| `APIOnly` | `false` | Return JSON from `Path` without serving HTML. |
+
+## Scope
+
+`monitor` does:
+
+- expose a lightweight status page
+- expose a JSON snapshot
+- show current process metrics
+- show Go runtime metrics
+- show basic system metrics
+- count total business requests
+
+`monitor` does not:
+
+- store historical metrics
+- send alerts
+- replace Prometheus or Grafana
+- provide tracing
+- aggregate multiple instances
+- collect application-specific business metrics
+
+## JSON Snapshot
+
+```json
+{
+  "pid": {
+    "cpu_percent": 2.4,
+    "rss_bytes": 48140288
+  },
+  "runtime": {
+    "goroutines": 18,
+    "heap_alloc_bytes": 7327744,
+    "heap_sys_bytes": 12582912,
+    "num_gc": 12,
+    "uptime_seconds": 3600
+  },
+  "os": {
+    "cpu_percent": 12.8,
+    "memory_used_percent": 61.5,
+    "memory_total_bytes": 8589934592,
+    "load1": 0.42
+  },
+  "http": {
+    "total_requests": 1024
+  }
+}
+```
+
+## Lifecycle
+
+`New` returns an `http.Handler` for the simplest setup. Use `NewMonitor` when you want to read the current snapshot or stop the collector explicitly:
+
+```go
+m := monitor.NewMonitor(mux)
+defer m.Stop()
+
+stats := m.Current()
+_ = stats
+```
+
+`Monitor` is safe for concurrent use.
+
+## Notes
+
+- Requests to the monitor path are not counted as business requests.
+- Metrics are collected in a background ticker and served from the latest race-safe snapshot.
+- Partial metric collection failures leave the affected values at zero instead of making the monitor endpoint fail.
+- The HTML page has no external frontend dependencies.
