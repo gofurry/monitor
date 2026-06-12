@@ -6,14 +6,19 @@ import (
 )
 
 const (
-	defaultPath    = "/monitor"
-	defaultTitle   = "Monitor"
-	defaultRefresh = 2 * time.Second
+	defaultPath         = "/monitor"
+	defaultTitle        = "Monitor"
+	defaultDescription  = "Live process, runtime, system, and HTTP metrics for this Go service."
+	defaultFooter       = "Powered by github.com/gofurry/monitor - MIT License."
+	defaultLanguage     = "en"
+	defaultSampleWindow = 60
+	defaultRefresh      = 2 * time.Second
 )
 
 // Config controls the monitor middleware.
 //
-// The zero value is valid and uses Path "/monitor", Title "Monitor", and a
+// The zero value is valid and uses Path "/monitor", Title "Monitor", a short
+// page description, an MIT License footer, English UI, 60 trend samples, and a
 // refresh interval of 2 seconds.
 type Config struct {
 	// Path is the endpoint used for the HTML page and JSON snapshot.
@@ -21,6 +26,24 @@ type Config struct {
 
 	// Title is shown in the HTML page title and heading.
 	Title string
+
+	// Description is shown below the page header. It is intended for a short
+	// service note or deployment context.
+	Description string
+
+	// Footer is shown at the bottom of the HTML page. It is intended for
+	// copyright, ownership, or license text.
+	Footer string
+
+	// DefaultLanguage controls the initial HTML UI language when the browser has
+	// no saved monitor language preference. Supported values are "en" and
+	// "zh-CN". Empty or unsupported values use "en".
+	DefaultLanguage string
+
+	// DefaultSampleWindow controls the initial number of trend samples shown in
+	// charts. Supported values are 30, 60, and 90. Zero or unsupported values use
+	// 60.
+	DefaultSampleWindow int
 
 	// Refresh controls how often metrics are collected in the background.
 	Refresh time.Duration
@@ -39,9 +62,13 @@ type Config struct {
 // DefaultConfig returns the default monitor configuration.
 func DefaultConfig() Config {
 	return Config{
-		Path:    defaultPath,
-		Title:   defaultTitle,
-		Refresh: defaultRefresh,
+		Path:                defaultPath,
+		Title:               defaultTitle,
+		Description:         defaultDescription,
+		Footer:              defaultFooter,
+		DefaultLanguage:     defaultLanguage,
+		DefaultSampleWindow: defaultSampleWindow,
+		Refresh:             defaultRefresh,
 	}
 }
 
@@ -59,8 +86,28 @@ func applyConfig(configs []Config) Config {
 	if cfg.Title == "" {
 		cfg.Title = defaultTitle
 	}
+	if cfg.Description == "" {
+		cfg.Description = defaultDescription
+	}
+	if cfg.Footer == "" {
+		cfg.Footer = defaultFooter
+	}
+	if !isSupportedLanguage(cfg.DefaultLanguage) {
+		cfg.DefaultLanguage = defaultLanguage
+	}
+	if !isSupportedSampleWindow(cfg.DefaultSampleWindow) {
+		cfg.DefaultSampleWindow = defaultSampleWindow
+	}
 	if cfg.Refresh <= 0 {
 		cfg.Refresh = defaultRefresh
 	}
 	return cfg
+}
+
+func isSupportedLanguage(lang string) bool {
+	return lang == "en" || lang == "zh-CN"
+}
+
+func isSupportedSampleWindow(samples int) bool {
+	return samples == 30 || samples == 60 || samples == 90
 }

@@ -102,8 +102,10 @@ func TestMonitorIgnoreRequestExcludesConfiguredRequests(t *testing.T) {
 
 func TestMonitorServesHTMLByDefault(t *testing.T) {
 	m := NewMonitor(http.NotFoundHandler(), Config{
-		Title:   "My App",
-		Refresh: time.Hour,
+		Title:       "My App",
+		Description: "Production edge monitor",
+		Footer:      "Copyright 2026 Example",
+		Refresh:     time.Hour,
 	})
 	defer m.Stop()
 
@@ -113,10 +115,46 @@ func TestMonitorServesHTMLByDefault(t *testing.T) {
 	if got := rec.Header().Get("Content-Type"); !strings.Contains(got, "text/html") {
 		t.Fatalf("content type = %q, want text/html", got)
 	}
-	if body := rec.Body.String(); !strings.Contains(body, "My App") {
-		t.Fatalf("HTML body does not contain title: %q", body)
+	body := rec.Body.String()
+	for _, want := range []string{"My App", "Production edge monitor", "Copyright 2026 Example"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("HTML body does not contain %q", want)
+		}
 	}
 	assertMonitorHeaders(t, rec)
+}
+
+func TestMonitorHTMLEscapesConfiguredContent(t *testing.T) {
+	m := NewMonitor(http.NotFoundHandler(), Config{
+		Title:       `<script>alert("title")</script>`,
+		Description: `<img src=x onerror=alert("description")>`,
+		Footer:      `<b>footer</b>`,
+		Refresh:     time.Hour,
+	})
+	defer m.Stop()
+
+	rec := httptest.NewRecorder()
+	m.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/monitor", nil))
+
+	body := rec.Body.String()
+	for _, unwanted := range []string{
+		`<script>alert("title")</script>`,
+		`<img src=x onerror=alert("description")>`,
+		`<b>footer</b>`,
+	} {
+		if strings.Contains(body, unwanted) {
+			t.Fatalf("HTML body contains unescaped content %q", unwanted)
+		}
+	}
+	for _, want := range []string{
+		`&lt;script&gt;alert(&#34;title&#34;)&lt;/script&gt;`,
+		`&lt;img src=x onerror=alert(&#34;description&#34;)&gt;`,
+		`&lt;b&gt;footer&lt;/b&gt;`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("HTML body does not contain escaped content %q", want)
+		}
+	}
 }
 
 func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
@@ -131,12 +169,48 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`id="lang-toggle"`,
 		`id="theme-toggle"`,
 		`class="control-dot"`,
-		`class="status-meta"`,
+		`class="status-state"`,
+		`class="header-divider"`,
+		`class="description-card"`,
+		`Page description`,
+		`Powered by github.com/gofurry/monitor - MIT License.`,
+		`grid-template-columns: minmax(0, 1fr) max-content`,
+		`grid-template-areas:`,
+		`"controls state"`,
+		`"updated response"`,
+		`@keyframes moveGlow`,
+		`--divider-line`,
+		`#f28c28`,
+		`#38bdf8`,
+		`width: min(1360px`,
+		`min-width: 250px`,
+		`width: 250px`,
+		`width: 100%`,
+		`class="sample-toggle"`,
+		`class="sample-option"`,
+		`data-samples="30"`,
+		`data-samples="60" aria-pressed="true"`,
+		`data-samples="90"`,
+		`const maxPoints = 90`,
+		`const defaultLanguage = "en"`,
+		`const defaultSampleWindow = 60`,
+		`let currentLang = defaultLanguage`,
+		`let currentSampleWindow = defaultSampleWindow`,
+		`function applySampleWindow`,
+		`visibleSamples(history.pidCPU)`,
+		`@media (max-width: 980px)`,
+		`#9b8ae3`,
+		`rgba(155, 138, 227, 0.22)`,
+		`#d96f72`,
 		`data-status="live"`,
 		`id="cpu-chart"`,
 		`id="memory-chart"`,
 		`id="goroutine-chart"`,
 		`id="request-chart"`,
+		`class="legend-dot"`,
+		`unit: "%"`,
+		`unit: "MiB"`,
+		`unit: "req"`,
 		`storageSet("monitor.theme"`,
 		`storageSet("monitor.lang"`,
 		`getContext("2d")`,
@@ -150,9 +224,37 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`JSON via Accept: application/json · in-browser history only`,
 		`Updated</span>`,
 		`Response</span>`,
+		`Last 60 samples`,
+		`最近 60 个采样点`,
+		`navigator.language`,
 	} {
 		if strings.Contains(body, unwanted) {
 			t.Fatalf("HTML body contains unwanted %q", unwanted)
+		}
+	}
+}
+
+func TestMonitorHTMLUsesConfiguredUIDefaults(t *testing.T) {
+	m := NewMonitor(http.NotFoundHandler(), Config{
+		DefaultLanguage:     "zh-CN",
+		DefaultSampleWindow: 30,
+		Refresh:             time.Hour,
+	})
+	defer m.Stop()
+
+	rec := httptest.NewRecorder()
+	m.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/monitor", nil))
+
+	body := rec.Body.String()
+	for _, want := range []string{
+		`const defaultLanguage = "zh-CN"`,
+		`const defaultSampleWindow = 30`,
+		`data-samples="30" aria-pressed="true"`,
+		`data-samples="60" aria-pressed="false"`,
+		`applySampleWindow(defaultSampleWindow)`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("HTML body does not contain %q", want)
 		}
 	}
 }
@@ -202,8 +304,48 @@ func TestConfigDefaultsAndPathNormalization(t *testing.T) {
 	if cfg.Title != defaultTitle {
 		t.Fatalf("title = %q, want %q", cfg.Title, defaultTitle)
 	}
+	if cfg.Description != defaultDescription {
+		t.Fatalf("description = %q, want %q", cfg.Description, defaultDescription)
+	}
+	if cfg.Footer != defaultFooter {
+		t.Fatalf("footer = %q, want %q", cfg.Footer, defaultFooter)
+	}
+	if cfg.DefaultLanguage != defaultLanguage {
+		t.Fatalf("default language = %q, want %q", cfg.DefaultLanguage, defaultLanguage)
+	}
+	if cfg.DefaultSampleWindow != defaultSampleWindow {
+		t.Fatalf("default sample window = %d, want %d", cfg.DefaultSampleWindow, defaultSampleWindow)
+	}
 	if cfg.Refresh != defaultRefresh {
 		t.Fatalf("refresh = %s, want %s", cfg.Refresh, defaultRefresh)
+	}
+}
+
+func TestConfigValidatesUIDefaults(t *testing.T) {
+	valid := applyConfig([]Config{
+		{
+			DefaultLanguage:     "zh-CN",
+			DefaultSampleWindow: 90,
+		},
+	})
+	if valid.DefaultLanguage != "zh-CN" {
+		t.Fatalf("default language = %q, want zh-CN", valid.DefaultLanguage)
+	}
+	if valid.DefaultSampleWindow != 90 {
+		t.Fatalf("default sample window = %d, want 90", valid.DefaultSampleWindow)
+	}
+
+	invalid := applyConfig([]Config{
+		{
+			DefaultLanguage:     "fr",
+			DefaultSampleWindow: 45,
+		},
+	})
+	if invalid.DefaultLanguage != defaultLanguage {
+		t.Fatalf("default language = %q, want %q", invalid.DefaultLanguage, defaultLanguage)
+	}
+	if invalid.DefaultSampleWindow != defaultSampleWindow {
+		t.Fatalf("default sample window = %d, want %d", invalid.DefaultSampleWindow, defaultSampleWindow)
 	}
 }
 

@@ -9,6 +9,10 @@ import (
 
 func renderHTML(cfg Config) string {
 	title := html.EscapeString(cfg.Title)
+	description := html.EscapeString(cfg.Description)
+	footer := html.EscapeString(cfg.Footer)
+	defaultLanguage := strconv.Quote(cfg.DefaultLanguage)
+	defaultSampleWindow := strconv.Itoa(cfg.DefaultSampleWindow)
 	refreshMS := strconv.FormatInt(maxInt64(int64(cfg.Refresh/time.Millisecond), 250), 10)
 
 	page := `<!doctype html>
@@ -16,22 +20,25 @@ func renderHTML(cfg Config) string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{{DESCRIPTION}}">
   <title>{{TITLE}}</title>
   <style>
     :root {
       color-scheme: light;
-      --bg: #f7f8fb;
-      --panel: #ffffff;
-      --panel-soft: #f1f5f9;
-      --text: #111827;
-      --muted: #64748b;
-      --border: #d8dee9;
-      --accent: #0891b2;
-      --accent-soft: rgba(8, 145, 178, 0.12);
-      --good: #16a34a;
-      --warn: #d97706;
-      --bad: #dc2626;
-      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --bg: #f3f6fa;
+      --panel: #fbfcfe;
+      --panel-soft: #eef3f8;
+      --text: #0f172a;
+      --muted: #52657f;
+      --border: #cfd8e6;
+      --accent: #0f8aa3;
+      --accent-soft: rgba(15, 138, 163, 0.1);
+      --good: #24935f;
+      --warn: #bf7b16;
+      --bad: #c94a4a;
+      --shadow: 0 10px 26px rgba(40, 54, 74, 0.07);
+      --divider-line: #c46a1b;
+      --divider-glow: #f28c28;
     }
     [data-theme="dark"] {
       color-scheme: dark;
@@ -47,6 +54,8 @@ func renderHTML(cfg Config) string {
       --warn: #facc15;
       --bad: #fb7185;
       --shadow: none;
+      --divider-line: #3b82f6;
+      --divider-glow: #38bdf8;
     }
     * { box-sizing: border-box; }
     body {
@@ -58,7 +67,7 @@ func renderHTML(cfg Config) string {
       line-height: 1.45;
     }
     main {
-      width: min(1120px, calc(100% - 32px));
+      width: min(1360px, calc(100% - 32px));
       margin: 0 auto;
       padding: 20px 0 22px;
     }
@@ -67,8 +76,7 @@ func renderHTML(cfg Config) string {
       align-items: center;
       justify-content: space-between;
       gap: 18px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
+      padding-bottom: 0;
     }
     .header-main {
       min-width: 0;
@@ -104,49 +112,66 @@ func renderHTML(cfg Config) string {
     }
     .status-box {
       display: grid;
-      gap: 5px;
+      grid-template-columns: minmax(0, 1fr) max-content;
+      grid-template-areas:
+        "controls state"
+        "updated response";
+      align-items: center;
+      justify-content: stretch;
+      gap: 5px 18px;
       color: var(--muted);
       text-align: right;
       font-size: 0.92rem;
       font-variant-numeric: tabular-nums;
+      min-width: 250px;
+      width: 250px;
+    }
+    .status-controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      grid-area: controls;
+      justify-self: start;
     }
     .status-line {
       display: flex;
       align-items: center;
       justify-content: flex-end;
       gap: 7px;
+      grid-area: state;
       color: var(--text);
       font-weight: 800;
+      justify-self: end;
     }
-    .status-controls {
+    .status-state {
       display: inline-flex;
       align-items: center;
       gap: 7px;
-      margin-right: 5px;
     }
     .control-dot {
-      width: 18px;
-      height: 18px;
+      width: 10px;
+      height: 10px;
       padding: 0;
+      border: 0;
       border-radius: 50%;
-      background: var(--panel-soft);
-      box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--muted) 18%, transparent);
+      background: var(--muted);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--muted) 16%, transparent);
     }
     .control-dot[data-active="light"] {
-      background: #f8fafc;
-      box-shadow: inset 0 0 0 5px #facc15;
+      background: #facc15;
+      box-shadow: 0 0 0 4px color-mix(in srgb, #facc15 22%, transparent);
     }
     .control-dot[data-active="dark"] {
-      background: #111827;
-      box-shadow: inset 0 0 0 5px #67e8f9;
+      background: #67e8f9;
+      box-shadow: 0 0 0 4px color-mix(in srgb, #67e8f9 22%, transparent);
     }
     .control-dot[data-active="en"] {
-      background: #0891b2;
-      box-shadow: inset 0 0 0 5px color-mix(in srgb, #ffffff 32%, transparent);
+      background: #9b8ae3;
+      box-shadow: 0 0 0 4px rgba(155, 138, 227, 0.22);
     }
     .control-dot[data-active="zh-CN"] {
-      background: #16a34a;
-      box-shadow: inset 0 0 0 5px color-mix(in srgb, #ffffff 32%, transparent);
+      background: #d96f72;
+      box-shadow: 0 0 0 4px rgba(217, 111, 114, 0.2);
     }
     .visually-hidden {
       position: absolute;
@@ -174,11 +199,55 @@ func renderHTML(cfg Config) string {
       background: var(--bad);
       box-shadow: 0 0 0 4px color-mix(in srgb, var(--bad) 18%, transparent);
     }
-    .status-meta {
-      display: flex;
-      justify-content: flex-end;
-      gap: 14px;
+    #updated-at {
+      grid-area: updated;
+      justify-self: start;
       white-space: nowrap;
+    }
+    #response-time {
+      grid-area: response;
+      justify-self: end;
+      white-space: nowrap;
+    }
+    .header-divider {
+      position: relative;
+      height: 38px;
+      overflow: hidden;
+      margin: 4px 0;
+    }
+    .header-divider:before {
+      content: "";
+      position: absolute;
+      left: 6%;
+      right: 6%;
+      top: 50%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--divider-line), transparent 78%), transparent);
+    }
+    .header-divider:after {
+      content: "";
+      top: 50%;
+      position: absolute;
+      left: 6%;
+      width: 18%;
+      height: 2px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--divider-glow), transparent 24%), transparent);
+      box-shadow: 0 0 22px color-mix(in srgb, var(--divider-glow), transparent 64%);
+      animation: moveGlow 3.2s ease-in-out infinite;
+    }
+    @keyframes moveGlow {
+      0% {
+        transform: translateX(-30%);
+        opacity: 0;
+      }
+      18%, 82% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateX(470%);
+        opacity: 0;
+      }
     }
     .cards, .chart-grid {
       display: grid;
@@ -188,15 +257,59 @@ func renderHTML(cfg Config) string {
       grid-template-columns: repeat(4, minmax(0, 1fr));
       margin-top: 20px;
     }
+    .description-card {
+      margin-top: 4px;
+      padding: 12px 14px 12px 16px;
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      background: color-mix(in srgb, var(--panel), transparent 36%);
+      color: var(--muted);
+      font-size: 0.93rem;
+      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--border), transparent 65%);
+    }
+    .description-card p {
+      margin: 0;
+      max-width: 78ch;
+    }
     .chart-section {
       margin-top: 22px;
     }
     .section-title {
       display: flex;
-      align-items: baseline;
+      align-items: center;
       justify-content: space-between;
       gap: 14px;
       margin-bottom: 12px;
+    }
+    .sample-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding: 3px;
+      border: 2px solid var(--border);
+      border-radius: 999px;
+      background: var(--panel-soft);
+    }
+    .sample-toggle button {
+      min-width: 36px;
+      height: 24px;
+      padding: 0 9px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      line-height: 1;
+      box-shadow: none;
+    }
+    .sample-toggle button:hover {
+      transform: none;
+      color: var(--text);
+    }
+    .sample-toggle button[aria-pressed="true"] {
+      background: var(--accent);
+      color: var(--bg);
     }
     .chart-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -204,7 +317,7 @@ func renderHTML(cfg Config) string {
     section, .chart-card {
       min-width: 0;
       background: var(--panel);
-      border: 1px solid var(--border);
+      border: 3px solid var(--border);
       border-radius: 8px;
       box-shadow: var(--shadow);
     }
@@ -212,7 +325,7 @@ func renderHTML(cfg Config) string {
       padding: 15px;
     }
     .chart-card {
-      padding: 14px;
+      padding: 14px 14px 16px;
     }
     h2 {
       margin: 0 0 14px;
@@ -262,36 +375,78 @@ func renderHTML(cfg Config) string {
       font-weight: 700;
       text-align: right;
     }
+    .legend-list {
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 6px 12px;
+    }
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .legend-dot[data-series="pid"], .legend-dot[data-series="rss"], .legend-dot[data-series="main"] {
+      background: var(--accent);
+    }
+    .legend-dot[data-series="os"] {
+      background: var(--warn);
+    }
+    .legend-dot[data-series="heap"] {
+      background: var(--good);
+    }
     canvas {
       display: block;
       width: 100%;
-      height: 150px;
+      height: 190px;
       border-radius: 6px;
       background: var(--panel-soft);
+    }
+    footer {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      text-align: center;
     }
     @media (max-width: 980px) {
       .cards {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
     }
     @media (max-width: 760px) {
       main {
-        width: min(100% - 24px, 1120px);
+        width: min(100% - 24px, 1360px);
         padding-top: 22px;
       }
       .header {
         align-items: stretch;
         flex-direction: column;
       }
+      .header-main {
+        text-align: center;
+      }
       .header-side, .status-box {
-        justify-items: start;
         text-align: left;
+        min-width: 0;
+        width: 100%;
       }
-      .status-line, .status-meta {
-        justify-content: flex-start;
+      .status-box {
+        grid-template-columns: minmax(0, 1fr) max-content;
+        justify-content: stretch;
       }
-      .chart-grid {
-        grid-template-columns: 1fr;
+      .status-line {
+        justify-self: end;
       }
     }
     @media (max-width: 560px) {
@@ -299,11 +454,16 @@ func renderHTML(cfg Config) string {
         grid-template-columns: 1fr;
       }
       .section-title {
-        display: block;
+        gap: 10px;
       }
-      .status-meta {
-        flex-wrap: wrap;
-        gap: 8px 12px;
+      .sample-toggle button {
+        min-width: 32px;
+        padding: 0 7px;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .header-divider:after {
+        animation: none;
       }
     }
   </style>
@@ -316,18 +476,25 @@ func renderHTML(cfg Config) string {
       </div>
       <div class="header-side">
         <div class="status-box">
+          <span class="status-controls" aria-label="Display preferences">
+            <button type="button" id="lang-toggle" class="control-dot" title="Language"><span class="visually-hidden">Language</span></button>
+            <button type="button" id="theme-toggle" class="control-dot" title="Theme"><span class="visually-hidden">Theme</span></button>
+          </span>
           <div class="status-line">
-            <span class="status-controls" aria-label="Display preferences">
-              <button type="button" id="lang-toggle" class="control-dot" title="Language"><span class="visually-hidden">Language</span></button>
-              <button type="button" id="theme-toggle" class="control-dot" title="Theme"><span class="visually-hidden">Theme</span></button>
+            <span class="status-state">
+              <span id="live-dot" data-status="live"></span>
+              <span id="live-text" data-i18n="live">LIVE</span>
             </span>
-            <span id="live-dot" data-status="live"></span>
-            <span id="live-text" data-i18n="live">LIVE</span>
           </div>
-          <div class="status-meta"><span id="updated-at">-</span><span id="response-time">-</span></div>
+          <span id="updated-at">-</span>
+          <span id="response-time">-</span>
         </div>
       </div>
     </header>
+    <div class="header-divider" aria-hidden="true"></div>
+    <aside class="description-card" aria-label="Page description">
+      <p>{{DESCRIPTION}}</p>
+    </aside>
 
     <div class="cards">
       <section>
@@ -367,42 +534,61 @@ func renderHTML(cfg Config) string {
     <div class="chart-section">
       <div class="section-title">
         <h2 data-i18n="trends">Trends</h2>
-        <div class="meta" data-i18n="chartWindow">Last 60 samples</div>
+        <div class="sample-toggle" role="group" aria-label="Chart sample window">
+          <button type="button" class="sample-option" data-samples="30" aria-pressed="{{SAMPLES_30_PRESSED}}">30</button>
+          <button type="button" class="sample-option" data-samples="60" aria-pressed="{{SAMPLES_60_PRESSED}}">60</button>
+          <button type="button" class="sample-option" data-samples="90" aria-pressed="{{SAMPLES_90_PRESSED}}">90</button>
+        </div>
       </div>
       <div class="chart-grid">
         <article class="chart-card">
           <div class="chart-head">
             <span data-i18n="cpuTrend">CPU</span>
-            <span class="chart-legend">PID / OS</span>
+            <span class="chart-legend legend-list">
+              <span class="legend-item"><span class="legend-dot" data-series="pid"></span>PID</span>
+              <span class="legend-item"><span class="legend-dot" data-series="os"></span>OS</span>
+            </span>
           </div>
           <canvas id="cpu-chart"></canvas>
         </article>
         <article class="chart-card">
           <div class="chart-head">
             <span data-i18n="memoryTrend">Memory</span>
-            <span class="chart-legend">RSS / Heap</span>
+            <span class="chart-legend legend-list">
+              <span class="legend-item"><span class="legend-dot" data-series="rss"></span>RSS</span>
+              <span class="legend-item"><span class="legend-dot" data-series="heap"></span>Heap</span>
+            </span>
           </div>
           <canvas id="memory-chart"></canvas>
         </article>
         <article class="chart-card">
           <div class="chart-head">
             <span data-i18n="goroutineTrend">Goroutines</span>
+            <span class="chart-legend legend-list">
+              <span class="legend-item"><span class="legend-dot" data-series="main"></span>Count</span>
+            </span>
           </div>
           <canvas id="goroutine-chart"></canvas>
         </article>
         <article class="chart-card">
           <div class="chart-head">
             <span data-i18n="requestTrend">Requests / interval</span>
+            <span class="chart-legend legend-list">
+              <span class="legend-item"><span class="legend-dot" data-series="main"></span>Req</span>
+            </span>
           </div>
           <canvas id="request-chart"></canvas>
         </article>
       </div>
     </div>
+    <footer>{{FOOTER}}</footer>
   </main>
 
   <script>
     const refreshMS = {{REFRESH_MS}};
-    const maxPoints = 60;
+    const defaultLanguage = {{DEFAULT_LANGUAGE}};
+    const defaultSampleWindow = {{DEFAULT_SAMPLE_WINDOW}};
+    const maxPoints = 90;
     const $ = (id) => document.getElementById(id);
     const nf = new Intl.NumberFormat();
     const messages = {
@@ -426,7 +612,6 @@ func renderHTML(cfg Config) string {
         load1: "Load1",
         requests: "Requests",
         trends: "Trends",
-        chartWindow: "Last 60 samples",
         cpuTrend: "CPU",
         memoryTrend: "Memory",
         goroutineTrend: "Goroutines",
@@ -452,7 +637,6 @@ func renderHTML(cfg Config) string {
         load1: "Load1",
         requests: "请求数",
         trends: "趋势",
-        chartWindow: "最近 60 个采样点",
         cpuTrend: "CPU",
         memoryTrend: "内存",
         goroutineTrend: "Goroutine",
@@ -471,8 +655,9 @@ func renderHTML(cfg Config) string {
     };
     let previousSnapshot = null;
     let currentThemeMode = "auto";
-    let currentLang = "en";
+    let currentLang = defaultLanguage;
     let currentStatus = "live";
+    let currentSampleWindow = defaultSampleWindow;
     let lastSuccessAt = 0;
 
     function storageGet(key) {
@@ -490,7 +675,7 @@ func renderHTML(cfg Config) string {
     function detectLang() {
       const saved = storageGet("monitor.lang");
       if (saved === "en" || saved === "zh-CN") return saved;
-      return navigator.language && navigator.language.indexOf("zh") === 0 ? "zh-CN" : "en";
+      return defaultLanguage;
     }
     function t(key) {
       return (messages[currentLang] && messages[currentLang][key]) || messages.en[key] || key;
@@ -531,6 +716,17 @@ func renderHTML(cfg Config) string {
       $("live-text").textContent = t(status);
       $("live-dot").dataset.status = status;
     }
+    function applySampleWindow(value) {
+      const next = Number(value);
+      currentSampleWindow = [30, 60, 90].indexOf(next) >= 0 ? next : 60;
+      document.querySelectorAll(".sample-option").forEach(function(button) {
+        button.setAttribute("aria-pressed", button.dataset.samples === String(currentSampleWindow));
+      });
+      renderCharts();
+    }
+    function visibleSamples(data) {
+      return data.slice(Math.max(0, data.length - currentSampleWindow));
+    }
     function pct(v) {
       return Number(v || 0).toFixed(1) + "%";
     }
@@ -565,6 +761,10 @@ func renderHTML(cfg Config) string {
       if (Math.abs(n) >= 1000) return (n / 1000).toFixed(1) + "k";
       if (Math.abs(n) >= 10) return n.toFixed(0);
       return n.toFixed(1);
+    }
+    function formatAxis(v, unit) {
+      const value = formatShort(v);
+      return unit ? value + " " + unit : value;
     }
     function cssVar(name) {
       return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -602,15 +802,16 @@ func renderHTML(cfg Config) string {
       });
       previousSnapshot = snapshot;
     }
-    function drawGrid(ctx, width, height, padding, min, max) {
+    function drawGrid(ctx, width, height, padding, min, max, options) {
       const border = cssVar("--border");
       const muted = cssVar("--muted");
+      const lines = 5;
       const plotH = height - padding.top - padding.bottom;
       ctx.strokeStyle = border;
       ctx.lineWidth = 1;
       ctx.globalAlpha = 0.55;
-      for (let i = 0; i <= 3; i++) {
-        const y = padding.top + (plotH / 3) * i;
+      for (let i = 0; i <= lines; i++) {
+        const y = padding.top + (plotH / lines) * i;
         ctx.beginPath();
         ctx.moveTo(padding.left, y);
         ctx.lineTo(width - padding.right, y);
@@ -619,8 +820,13 @@ func renderHTML(cfg Config) string {
       ctx.globalAlpha = 1;
       ctx.fillStyle = muted;
       ctx.font = "11px system-ui, sans-serif";
-      ctx.fillText(formatShort(max), 4, padding.top + 4);
-      ctx.fillText(formatShort(min), 4, height - padding.bottom);
+      ctx.textBaseline = "middle";
+      for (let i = 0; i <= lines; i++) {
+        const value = max - ((max - min) / lines) * i;
+        const y = padding.top + (plotH / lines) * i;
+        ctx.fillText(formatAxis(value, options.unit), 4, y);
+      }
+      ctx.textBaseline = "alphabetic";
     }
     function drawSeries(ctx, data, cfg) {
       const width = cfg.width;
@@ -649,7 +855,7 @@ func renderHTML(cfg Config) string {
       const rect = canvas.getBoundingClientRect();
       const width = Math.max(rect.width, 1);
       const height = Math.max(rect.height, 1);
-      const padding = { top: 12, right: 10, bottom: 18, left: 32 };
+      const padding = { top: 12, right: 10, bottom: 18, left: 58 };
       canvas.width = Math.floor(width * dpr);
       canvas.height = Math.floor(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -663,7 +869,7 @@ func renderHTML(cfg Config) string {
       const min = options && Number.isFinite(options.minValue) ? options.minValue : 0;
       const floorMax = options && Number.isFinite(options.minMax) ? options.minMax : 0;
       const max = Math.max(floorMax, values.length ? Math.max.apply(null, values) : 1, 1);
-      drawGrid(ctx, width, height, padding, min, max);
+      drawGrid(ctx, width, height, padding, min, max, options || {});
       seriesList.forEach(function(series) {
         drawSeries(ctx, series.data, {
           width: width,
@@ -680,19 +886,19 @@ func renderHTML(cfg Config) string {
       const good = cssVar("--good");
       const warn = cssVar("--warn");
       drawLineChart($("cpu-chart"), [
-        { data: history.pidCPU, color: accent },
-        { data: history.osCPU, color: warn }
-      ], { minValue: 0, minMax: 100 });
+        { data: visibleSamples(history.pidCPU), color: accent },
+        { data: visibleSamples(history.osCPU), color: warn }
+      ], { minValue: 0, minMax: 100, unit: "%" });
       drawLineChart($("memory-chart"), [
-        { data: history.rssMiB, color: accent },
-        { data: history.heapMiB, color: good }
-      ], { minValue: 0 });
+        { data: visibleSamples(history.rssMiB), color: accent },
+        { data: visibleSamples(history.heapMiB), color: good }
+      ], { minValue: 0, unit: "MiB" });
       drawLineChart($("goroutine-chart"), [
-        { data: history.goroutines, color: accent }
-      ], { minValue: 0 });
+        { data: visibleSamples(history.goroutines), color: accent }
+      ], { minValue: 0, unit: "g" });
       drawLineChart($("request-chart"), [
-        { data: history.requestsDelta, color: accent }
-      ], { minValue: 0 });
+        { data: visibleSamples(history.requestsDelta), color: accent }
+      ], { minValue: 0, unit: "req" });
     }
     async function refresh() {
       const started = performance.now();
@@ -715,6 +921,11 @@ func renderHTML(cfg Config) string {
 
     $("lang-toggle").addEventListener("click", nextLang);
     $("theme-toggle").addEventListener("click", nextTheme);
+    document.querySelectorAll(".sample-option").forEach(function(button) {
+      button.addEventListener("click", function() {
+        applySampleWindow(button.dataset.samples);
+      });
+    });
     if (window.matchMedia) {
       const themeQuery = window.matchMedia("(prefers-color-scheme: dark)");
       const onThemeChange = function() {
@@ -731,6 +942,7 @@ func renderHTML(cfg Config) string {
 
     currentLang = detectLang();
     applyTheme(storageGet("monitor.theme") || "auto", false);
+    applySampleWindow(defaultSampleWindow);
     applyLang(currentLang);
     refresh();
     setInterval(refresh, refreshMS);
@@ -739,6 +951,13 @@ func renderHTML(cfg Config) string {
 </html>`
 
 	page = strings.ReplaceAll(page, "{{TITLE}}", title)
+	page = strings.ReplaceAll(page, "{{DESCRIPTION}}", description)
+	page = strings.ReplaceAll(page, "{{FOOTER}}", footer)
+	page = strings.ReplaceAll(page, "{{DEFAULT_LANGUAGE}}", defaultLanguage)
+	page = strings.ReplaceAll(page, "{{DEFAULT_SAMPLE_WINDOW}}", defaultSampleWindow)
+	page = strings.ReplaceAll(page, "{{SAMPLES_30_PRESSED}}", strconv.FormatBool(cfg.DefaultSampleWindow == 30))
+	page = strings.ReplaceAll(page, "{{SAMPLES_60_PRESSED}}", strconv.FormatBool(cfg.DefaultSampleWindow == 60))
+	page = strings.ReplaceAll(page, "{{SAMPLES_90_PRESSED}}", strconv.FormatBool(cfg.DefaultSampleWindow == 90))
 	page = strings.ReplaceAll(page, "{{REFRESH_MS}}", refreshMS)
 	return page
 }

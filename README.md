@@ -71,10 +71,14 @@ curl -H "Accept: application/json" http://localhost:8080/monitor
 
 ```go
 handler := monitor.New(mux, monitor.Config{
-	Path:    "/monitor",
-	Title:   "My App Monitor",
-	Refresh: 2 * time.Second,
-	APIOnly: false,
+	Path:                "/monitor",
+	Title:               "My App Monitor",
+	Description:         "Live production service metrics.",
+	Footer:              "Copyright 2026 Example Inc.",
+	DefaultLanguage:     "en",
+	DefaultSampleWindow: 60,
+	Refresh:             2 * time.Second,
+	APIOnly:             false,
 	IgnoreRequest: func(r *http.Request) bool {
 		return r.URL.Path == "/healthz" || r.URL.Path == "/readyz"
 	},
@@ -87,6 +91,10 @@ Defaults:
 |---|---:|---|
 | `Path` | `/monitor` | Endpoint for the HTML page and JSON snapshot. |
 | `Title` | `Monitor` | HTML page title and heading. |
+| `Description` | `Live process, runtime, system, and HTTP metrics for this Go service.` | Short visible description below the header. |
+| `Footer` | `Powered by github.com/gofurry/monitor - MIT License.` | Footer text for copyright, ownership, or license notes. |
+| `DefaultLanguage` | `en` | Initial UI language when no browser preference is saved. Supported values: `en`, `zh-CN`. |
+| `DefaultSampleWindow` | `60` | Initial trend chart sample count. Supported values: `30`, `60`, `90`. |
 | `Refresh` | `2s` | Background metrics collection interval. |
 | `APIOnly` | `false` | Return JSON from `Path` without serving HTML. |
 | `IgnoreRequest` | `nil` | Exclude selected requests from `http.total_requests`. |
