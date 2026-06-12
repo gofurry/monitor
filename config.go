@@ -1,6 +1,9 @@
 package monitor
 
-import "time"
+import (
+	"net/http"
+	"time"
+)
 
 const (
 	defaultPath    = "/monitor"
@@ -24,6 +27,13 @@ type Config struct {
 
 	// APIOnly makes Path return JSON even when the request does not ask for it.
 	APIOnly bool
+
+	// IgnoreRequest reports whether r should be excluded from HTTP request
+	// counting. It does not stop the request from being served by the next
+	// handler.
+	//
+	// Requests to Path are always excluded before IgnoreRequest is called.
+	IgnoreRequest func(r *http.Request) bool
 }
 
 // DefaultConfig returns the default monitor configuration.

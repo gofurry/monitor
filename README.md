@@ -52,6 +52,9 @@ handler := monitor.New(mux, monitor.Config{
 	Title:   "My App Monitor",
 	Refresh: 2 * time.Second,
 	APIOnly: false,
+	IgnoreRequest: func(r *http.Request) bool {
+		return r.URL.Path == "/healthz" || r.URL.Path == "/readyz"
+	},
 })
 ```
 
@@ -63,6 +66,9 @@ Defaults:
 | `Title` | `Monitor` | HTML page title and heading. |
 | `Refresh` | `2s` | Background metrics collection interval. |
 | `APIOnly` | `false` | Return JSON from `Path` without serving HTML. |
+| `IgnoreRequest` | `nil` | Exclude selected requests from `http.total_requests`. |
+
+Requests to `Path` are always excluded from `http.total_requests`; the monitor page and its JSON polling do not inflate the business request count. `IgnoreRequest` is for other non-business traffic, such as load balancer probes or health checks. Ignored requests are still served by your handler.
 
 ## Scope
 

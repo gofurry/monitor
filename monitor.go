@@ -65,7 +65,9 @@ func (m *Monitor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m.requests.Add(1)
+	if !m.ignoreRequest(r) {
+		m.requests.Add(1)
+	}
 	m.next.ServeHTTP(w, r)
 }
 
@@ -112,6 +114,10 @@ func (m *Monitor) serveMonitor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	m.serveHTML(w)
+}
+
+func (m *Monitor) ignoreRequest(r *http.Request) bool {
+	return m.cfg.IgnoreRequest != nil && m.cfg.IgnoreRequest(r)
 }
 
 func (m *Monitor) serveJSON(w http.ResponseWriter) {

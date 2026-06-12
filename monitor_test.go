@@ -38,9 +38,16 @@ func TestNewMonitorServesJSONSnapshot(t *testing.T) {
 }
 
 func TestMonitorDoesNotCountMonitorRequests(t *testing.T) {
+	var ignoredCalls int
 	m := NewMonitor(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
-	}), Config{Refresh: time.Hour})
+	}), Config{
+		Refresh: time.Hour,
+		IgnoreRequest: func(r *http.Request) bool {
+			ignoredCalls++
+			return false
+		},
+	})
 	defer m.Stop()
 
 	for i := 0; i < 3; i++ {
@@ -52,9 +59,41 @@ func TestMonitorDoesNotCountMonitorRequests(t *testing.T) {
 	if got := m.Current().HTTP.TotalRequests; got != 0 {
 		t.Fatalf("monitor requests = %d, want 0", got)
 	}
+	if ignoredCalls != 0 {
+		t.Fatalf("ignore callback calls after monitor requests = %d, want 0", ignoredCalls)
+	}
 
 	m.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/hello", nil))
 	m.collectOnce()
+	if got := m.Current().HTTP.TotalRequests; got != 1 {
+		t.Fatalf("business requests = %d, want 1", got)
+	}
+	if ignoredCalls != 1 {
+		t.Fatalf("ignore callback calls after business request = %d, want 1", ignoredCalls)
+	}
+}
+
+func TestMonitorIgnoreRequestExcludesConfiguredRequests(t *testing.T) {
+	var served int
+	m := NewMonitor(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		served++
+		w.WriteHeader(http.StatusNoContent)
+	}), Config{
+		Refresh: time.Hour,
+		IgnoreRequest: func(r *http.Request) bool {
+			return r.URL.Path == "/healthz" || r.URL.Path == "/readyz"
+		},
+	})
+	defer m.Stop()
+
+	m.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	m.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/readyz", nil))
+	m.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/api/users", nil))
+	m.collectOnce()
+
+	if served != 3 {
+		t.Fatalf("served requests = %d, want 3", served)
+	}
 	if got := m.Current().HTTP.TotalRequests; got != 1 {
 		t.Fatalf("business requests = %d, want 1", got)
 	}
