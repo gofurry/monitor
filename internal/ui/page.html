@@ -138,6 +138,16 @@
         </article>
         <article class="chart-card">
           <div class="chart-head">
+            <span data-i18n="heapGCTrend">Heap / Next GC</span>
+            <span class="chart-legend legend-list">
+              <span class="legend-item"><span class="legend-dot" data-series="heap"></span><span data-i18n="heapAlloc">Heap Alloc</span></span>
+              <span class="legend-item"><span class="legend-dot" data-series="nextgc"></span><span data-i18n="nextGC">Next GC</span></span>
+            </span>
+          </div>
+          <canvas id="heap-gc-chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <div class="chart-head">
             <span data-i18n="goroutineTrend">Goroutines</span>
             <span class="chart-legend legend-list">
               <span class="legend-item"><span class="legend-dot" data-series="main"></span>Count</span>
@@ -153,6 +163,35 @@
             </span>
           </div>
           <canvas id="request-chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <div class="chart-head">
+            <span data-i18n="latencyTrend">HTTP latency</span>
+            <span class="chart-legend legend-list">
+              <span class="legend-item"><span class="legend-dot" data-series="recent"></span><span data-i18n="recent">Recent</span></span>
+              <span class="legend-item"><span class="legend-dot" data-series="max"></span><span data-i18n="max">Max</span></span>
+            </span>
+          </div>
+          <canvas id="latency-chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <div class="chart-head">
+            <span data-i18n="inFlightTrend">In-flight</span>
+            <span class="chart-legend legend-list">
+              <span class="legend-item"><span class="legend-dot" data-series="main"></span><span data-i18n="active">Active</span></span>
+            </span>
+          </div>
+          <canvas id="in-flight-chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <div class="chart-head">
+            <span data-i18n="gcPauseTrend">GC pause</span>
+            <span class="chart-legend legend-list">
+              <span class="legend-item"><span class="legend-dot" data-series="window"></span><span data-i18n="window">Window</span></span>
+              <span class="legend-item"><span class="legend-dot" data-series="last"></span><span data-i18n="last">Last</span></span>
+            </span>
+          </div>
+          <canvas id="gc-pause-chart"></canvas>
         </article>
       </div>
     </div>

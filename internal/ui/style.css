@@ -454,10 +454,10 @@
       border-radius: 50%;
       background: var(--accent);
     }
-    .legend-dot[data-series="pid"], .legend-dot[data-series="rss"], .legend-dot[data-series="main"] {
+    .legend-dot[data-series="pid"], .legend-dot[data-series="rss"], .legend-dot[data-series="main"], .legend-dot[data-series="recent"], .legend-dot[data-series="window"] {
       background: var(--accent);
     }
-    .legend-dot[data-series="os"] {
+    .legend-dot[data-series="os"], .legend-dot[data-series="max"], .legend-dot[data-series="nextgc"], .legend-dot[data-series="last"] {
       background: var(--warn);
     }
     .legend-dot[data-series="heap"] {

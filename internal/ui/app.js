@@ -63,8 +63,17 @@
         trends: "Trends",
         cpuTrend: "CPU",
         memoryTrend: "Memory",
+        heapGCTrend: "Heap / Next GC",
         goroutineTrend: "Goroutines",
-        requestTrend: "Requests / interval"
+        requestTrend: "Requests / interval",
+        latencyTrend: "HTTP latency",
+        inFlightTrend: "In-flight",
+        gcPauseTrend: "GC pause",
+        recent: "Recent",
+        max: "Max",
+        active: "Active",
+        window: "Window",
+        last: "Last"
       },
       "zh-CN": {
         live: "运行中",
@@ -123,8 +132,17 @@
         trends: "趋势",
         cpuTrend: "CPU",
         memoryTrend: "内存",
+        heapGCTrend: "堆 / 下次 GC",
         goroutineTrend: "Goroutine",
-        requestTrend: "区间请求数"
+        requestTrend: "区间请求数",
+        latencyTrend: "HTTP 延迟",
+        inFlightTrend: "处理中请求",
+        gcPauseTrend: "GC 暂停",
+        recent: "近期",
+        max: "最大",
+        active: "活跃",
+        window: "窗口",
+        last: "最近"
       }
     };
     const languages = ["en", "zh-CN"];
@@ -134,8 +152,14 @@
       osCPU: [],
       rssMiB: [],
       heapMiB: [],
+      nextGCMiB: [],
       goroutines: [],
-      requestsDelta: []
+      requestsDelta: [],
+      latencyRecentNS: [],
+      latencyMaxNS: [],
+      inFlight: [],
+      gcPauseRecentNS: [],
+      gcPauseLastNS: []
     };
     let previousSnapshot = null;
     let currentThemeMode = "auto";
@@ -263,6 +287,9 @@
       if (n >= 1000) return (n / 1000).toFixed(1) + " us";
       if (n > 0) return Math.max(1, Math.round(n)) + " ns";
       return "0 ns";
+    }
+    function durationAxisNS(v) {
+      return durationNS(v).replace(" ", "");
     }
     function diskCountLabel(disks) {
       const count = disks.length;
@@ -512,8 +539,14 @@
       history.osCPU.push(snapshot.os.cpu_percent || 0);
       history.rssMiB.push(bytesToMiB(snapshot.pid.rss_bytes || 0));
       history.heapMiB.push(bytesToMiB(snapshot.runtime.heap_alloc_bytes || 0));
+      history.nextGCMiB.push(bytesToMiB(snapshot.runtime.next_gc_bytes || 0));
       history.goroutines.push(snapshot.runtime.goroutines || 0);
       history.requestsDelta.push(delta);
+      history.latencyRecentNS.push((snapshot.http.latency && snapshot.http.latency.recent_ns) || 0);
+      history.latencyMaxNS.push((snapshot.http.latency && snapshot.http.latency.max_ns) || 0);
+      history.inFlight.push(snapshot.http.in_flight_requests || 0);
+      history.gcPauseRecentNS.push(snapshot.runtime.gc_pause_recent_ns || 0);
+      history.gcPauseLastNS.push(snapshot.runtime.gc_pause_last_ns || 0);
       Object.keys(history).forEach(function(key) {
         while (history[key].length > maxPoints) history[key].shift();
       });
@@ -541,7 +574,8 @@
       for (let i = 0; i <= lines; i++) {
         const value = max - ((max - min) / lines) * i;
         const y = padding.top + (plotH / lines) * i;
-        ctx.fillText(formatAxis(value, options.unit), 4, y);
+        const label = options.formatValue ? options.formatValue(value) : formatAxis(value, options.unit);
+        ctx.fillText(label, 4, y);
       }
       ctx.textBaseline = "alphabetic";
     }
@@ -572,7 +606,7 @@
       const rect = canvas.getBoundingClientRect();
       const width = Math.max(rect.width, 1);
       const height = Math.max(rect.height, 1);
-      const padding = { top: 12, right: 10, bottom: 18, left: 58 };
+      const padding = { top: 12, right: 10, bottom: 18, left: (options && options.leftPadding) || 58 };
       canvas.width = Math.floor(width * dpr);
       canvas.height = Math.floor(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -610,12 +644,27 @@
         { data: visibleSamples(history.rssMiB), color: accent },
         { data: visibleSamples(history.heapMiB), color: good }
       ], { minValue: 0, unit: "MiB" });
+      drawLineChart($("heap-gc-chart"), [
+        { data: visibleSamples(history.heapMiB), color: good },
+        { data: visibleSamples(history.nextGCMiB), color: warn }
+      ], { minValue: 0, unit: "MiB" });
       drawLineChart($("goroutine-chart"), [
         { data: visibleSamples(history.goroutines), color: accent }
       ], { minValue: 0, unit: "g" });
       drawLineChart($("request-chart"), [
         { data: visibleSamples(history.requestsDelta), color: accent }
       ], { minValue: 0, unit: "req" });
+      drawLineChart($("latency-chart"), [
+        { data: visibleSamples(history.latencyRecentNS), color: accent },
+        { data: visibleSamples(history.latencyMaxNS), color: warn }
+      ], { minValue: 0, formatValue: durationAxisNS, leftPadding: 70 });
+      drawLineChart($("in-flight-chart"), [
+        { data: visibleSamples(history.inFlight), color: accent }
+      ], { minValue: 0, unit: "req" });
+      drawLineChart($("gc-pause-chart"), [
+        { data: visibleSamples(history.gcPauseRecentNS), color: accent },
+        { data: visibleSamples(history.gcPauseLastNS), color: warn }
+      ], { minValue: 0, formatValue: durationAxisNS, leftPadding: 70 });
     }
     function updateScrollOrb() {
       const dock = $("page-scroll-dock");
