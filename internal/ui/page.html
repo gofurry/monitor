@@ -36,15 +36,29 @@
     </aside>
 
     <div class="cards">
-      <section>
-        <h2 data-i18n="process">Process</h2>
+      <section class="metric-card">
+        <div class="metric-card__head">
+          <h2 data-i18n="process">Process</h2>
+          <div class="metric-pager" hidden>
+            <button type="button" class="metric-pager__prev" aria-label="Previous metric page">&lt;</button>
+            <span class="metric-pager__status">1 / 1</span>
+            <button type="button" class="metric-pager__next" aria-label="Next metric page">&gt;</button>
+          </div>
+        </div>
         <dl>
           <div class="row"><dt data-i18n="cpu">CPU</dt><dd id="pid-cpu">-</dd></div>
           <div class="row"><dt data-i18n="rss">RSS</dt><dd id="pid-rss">-</dd></div>
         </dl>
       </section>
-      <section>
-        <h2 data-i18n="runtime">Runtime</h2>
+      <section class="metric-card">
+        <div class="metric-card__head">
+          <h2 data-i18n="runtime">Runtime</h2>
+          <div class="metric-pager" hidden>
+            <button type="button" class="metric-pager__prev" aria-label="Previous metric page">&lt;</button>
+            <span class="metric-pager__status">1 / 1</span>
+            <button type="button" class="metric-pager__next" aria-label="Next metric page">&gt;</button>
+          </div>
+        </div>
         <dl>
           <div class="row"><dt data-i18n="goroutines">Goroutines</dt><dd id="rt-goroutines">-</dd></div>
           <div class="row"><dt data-i18n="heapAlloc">Heap Alloc</dt><dd id="rt-heap-alloc">-</dd></div>
@@ -53,8 +67,15 @@
           <div class="row"><dt data-i18n="uptime">Uptime</dt><dd id="rt-uptime">-</dd></div>
         </dl>
       </section>
-      <section>
-        <h2 data-i18n="system">System</h2>
+      <section class="metric-card">
+        <div class="metric-card__head">
+          <h2 data-i18n="system">System</h2>
+          <div class="metric-pager" hidden>
+            <button type="button" class="metric-pager__prev" aria-label="Previous metric page">&lt;</button>
+            <span class="metric-pager__status">1 / 1</span>
+            <button type="button" class="metric-pager__next" aria-label="Next metric page">&gt;</button>
+          </div>
+        </div>
         <dl>
           <div class="row"><dt data-i18n="cpu">CPU</dt><dd id="os-cpu">-</dd></div>
           <div class="row"><dt data-i18n="memory">Memory</dt><dd id="os-memory">-</dd></div>
@@ -62,10 +83,24 @@
           <div class="row"><dt data-i18n="load1">Load1</dt><dd id="os-load">-</dd></div>
         </dl>
       </section>
-      <section>
-        <h2 data-i18n="http">HTTP</h2>
+      <section class="metric-card">
+        <div class="metric-card__head">
+          <h2 data-i18n="http">HTTP</h2>
+          <div class="metric-pager" hidden>
+            <button type="button" class="metric-pager__prev" aria-label="Previous metric page">&lt;</button>
+            <span class="metric-pager__status">1 / 1</span>
+            <button type="button" class="metric-pager__next" aria-label="Next metric page">&gt;</button>
+          </div>
+        </div>
         <dl>
           <div class="row"><dt data-i18n="requests">Requests</dt><dd id="http-requests">-</dd></div>
+          <div class="row"><dt data-i18n="inFlight">In-flight</dt><dd id="http-in-flight">-</dd></div>
+          <div class="row"><dt data-i18n="recentLatency">Recent latency</dt><dd id="http-latency-recent">-</dd></div>
+          <div class="row"><dt data-i18n="maxLatency">Max latency</dt><dd id="http-latency-max">-</dd></div>
+          <div class="row"><dt data-i18n="status2xx">2xx</dt><dd id="http-status-2xx">-</dd></div>
+          <div class="row"><dt data-i18n="status3xx">3xx</dt><dd id="http-status-3xx">-</dd></div>
+          <div class="row"><dt data-i18n="status4xx">4xx</dt><dd id="http-status-4xx">-</dd></div>
+          <div class="row"><dt data-i18n="status5xx">5xx</dt><dd id="http-status-5xx">-</dd></div>
         </dl>
       </section>
     </div>

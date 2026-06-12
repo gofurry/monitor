@@ -2,6 +2,7 @@
     const defaultLanguage = monitorConfig.defaultLanguage;
     const defaultSampleWindow = monitorConfig.defaultSampleWindow;
     const maxPoints = 90;
+    const metricsPerPage = 5;
     const $ = (id) => document.getElementById(id);
     const nf = new Intl.NumberFormat();
     const messages = {
@@ -24,6 +25,13 @@
         totalRam: "Total RAM",
         load1: "Load1",
         requests: "Requests",
+        inFlight: "In-flight",
+        recentLatency: "Recent latency",
+        maxLatency: "Max latency",
+        status2xx: "2xx",
+        status3xx: "3xx",
+        status4xx: "4xx",
+        status5xx: "5xx",
         trends: "Trends",
         cpuTrend: "CPU",
         memoryTrend: "Memory",
@@ -49,6 +57,13 @@
         totalRam: "总内存",
         load1: "Load1",
         requests: "请求数",
+        inFlight: "处理中",
+        recentLatency: "近期延迟",
+        maxLatency: "最大延迟",
+        status2xx: "2xx",
+        status3xx: "3xx",
+        status4xx: "4xx",
+        status5xx: "5xx",
         trends: "趋势",
         cpuTrend: "CPU",
         memoryTrend: "内存",
@@ -179,6 +194,46 @@
       const value = formatShort(v);
       return unit ? value + " " + unit : value;
     }
+    function durationNS(v) {
+      const n = Number(v || 0);
+      if (n >= 1000000000) return (n / 1000000000).toFixed(2) + " s";
+      if (n >= 1000000) return (n / 1000000).toFixed(2) + " ms";
+      if (n >= 1000) return (n / 1000).toFixed(1) + " us";
+      if (n > 0) return Math.max(1, Math.round(n)) + " ns";
+      return "0 ns";
+    }
+    function initMetricPagination() {
+      document.querySelectorAll(".metric-card").forEach(function(card) {
+        const rows = Array.from(card.querySelectorAll("dl > .row"));
+        const pager = card.querySelector(".metric-pager");
+        if (!pager || rows.length <= metricsPerPage) return;
+
+        const totalPages = Math.ceil(rows.length / metricsPerPage);
+        const prev = pager.querySelector(".metric-pager__prev");
+        const next = pager.querySelector(".metric-pager__next");
+        const status = pager.querySelector(".metric-pager__status");
+        let page = 0;
+
+        function renderPage() {
+          rows.forEach(function(row, index) {
+            row.hidden = index < page * metricsPerPage || index >= (page + 1) * metricsPerPage;
+          });
+          status.textContent = (page + 1) + " / " + totalPages;
+        }
+
+        prev.addEventListener("click", function() {
+          page = (page + totalPages - 1) % totalPages;
+          renderPage();
+        });
+        next.addEventListener("click", function() {
+          page = (page + 1) % totalPages;
+          renderPage();
+        });
+
+        pager.hidden = false;
+        renderPage();
+      });
+    }
     function cssVar(name) {
       return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     }
@@ -195,6 +250,13 @@
       $("os-total").textContent = bytes(data.os.memory_total_bytes);
       $("os-load").textContent = Number(data.os.load1 || 0).toFixed(2);
       $("http-requests").textContent = nf.format(data.http.total_requests || 0);
+      $("http-in-flight").textContent = nf.format(data.http.in_flight_requests || 0);
+      $("http-latency-recent").textContent = durationNS(data.http.latency && data.http.latency.recent_ns);
+      $("http-latency-max").textContent = durationNS(data.http.latency && data.http.latency.max_ns);
+      $("http-status-2xx").textContent = nf.format((data.http.status_codes && data.http.status_codes["2xx"]) || 0);
+      $("http-status-3xx").textContent = nf.format((data.http.status_codes && data.http.status_codes["3xx"]) || 0);
+      $("http-status-4xx").textContent = nf.format((data.http.status_codes && data.http.status_codes["4xx"]) || 0);
+      $("http-status-5xx").textContent = nf.format((data.http.status_codes && data.http.status_codes["5xx"]) || 0);
       $("updated-at").textContent = new Date().toLocaleString();
       $("response-time").textContent = elapsed.toFixed(1) + " ms";
     }
@@ -357,6 +419,7 @@
     $("lang-toggle").addEventListener("click", nextLang);
     $("theme-toggle").addEventListener("click", nextTheme);
     $("page-scroll-dock").addEventListener("click", scrollUpQuarter);
+    initMetricPagination();
     document.querySelectorAll(".sample-option").forEach(function(button) {
       button.addEventListener("click", function() {
         applySampleWindow(button.dataset.samples);

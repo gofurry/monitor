@@ -332,6 +332,50 @@
     .section-title h2 {
       margin: 0;
     }
+    .metric-card__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .metric-card__head h2 {
+      margin: 0;
+    }
+    .metric-pager {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 72px;
+      justify-content: flex-end;
+      color: var(--muted);
+      font-size: 0.74rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .metric-pager[hidden] {
+      display: none;
+    }
+    .metric-pager button {
+      display: grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--panel-soft), transparent 16%);
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .metric-pager button:hover {
+      color: var(--text);
+      background: var(--accent-soft);
+      transform: none;
+    }
     dl {
       display: grid;
       gap: 11px;
@@ -343,6 +387,9 @@
       justify-content: space-between;
       gap: 14px;
       min-height: 27px;
+    }
+    .row[hidden] {
+      display: none;
     }
     dt {
       color: var(--muted);

@@ -1,7 +1,12 @@
 package monitor
 
 import (
+	"bufio"
 	"encoding/json"
+	"fmt"
+	"io"
+	"math"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -22,8 +27,17 @@ type Monitor struct {
 	startedAt time.Time
 	proc      *process.Process
 
-	requests atomic.Uint64
-	snapshot atomic.Value // stores Stats
+	requests      atomic.Uint64
+	inFlight      atomic.Uint64
+	status1xx     atomic.Uint64
+	status2xx     atomic.Uint64
+	status3xx     atomic.Uint64
+	status4xx     atomic.Uint64
+	status5xx     atomic.Uint64
+	latencyLastNS atomic.Uint64
+	latencyRecent atomic.Uint64
+	latencyMaxNS  atomic.Uint64
+	snapshot      atomic.Value // stores Stats
 
 	stopOnce sync.Once
 	stopCh   chan struct{}
@@ -54,6 +68,7 @@ func NewMonitor(next http.Handler, config ...Config) *Monitor {
 		proc:      currentProcess(),
 		stopCh:    make(chan struct{}),
 	}
+	m.latencyRecent.Store(ewmaUninitializedBits)
 	m.start()
 	return m
 }
@@ -66,7 +81,8 @@ func (m *Monitor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !m.ignoreRequest(r) {
-		m.requests.Add(1)
+		m.serveBusiness(w, r)
+		return
 	}
 	m.next.ServeHTTP(w, r)
 }
@@ -125,6 +141,150 @@ func (m *Monitor) serveMonitor(w http.ResponseWriter, r *http.Request) {
 
 func (m *Monitor) ignoreRequest(r *http.Request) bool {
 	return m.cfg.IgnoreRequest != nil && m.cfg.IgnoreRequest(r)
+}
+
+func (m *Monitor) serveBusiness(w http.ResponseWriter, r *http.Request) {
+	m.requests.Add(1)
+	m.inFlight.Add(1)
+	started := time.Now()
+	rw := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+	defer func() {
+		m.inFlight.Add(^uint64(0))
+		m.recordBusinessRequest(rw.status, time.Since(started))
+	}()
+
+	m.next.ServeHTTP(rw, r)
+}
+
+func (m *Monitor) recordBusinessRequest(status int, duration time.Duration) {
+	if status < 100 {
+		status = http.StatusOK
+	}
+	switch {
+	case status < 200:
+		m.status1xx.Add(1)
+	case status < 300:
+		m.status2xx.Add(1)
+	case status < 400:
+		m.status3xx.Add(1)
+	case status < 500:
+		m.status4xx.Add(1)
+	default:
+		m.status5xx.Add(1)
+	}
+
+	if duration <= 0 {
+		duration = time.Nanosecond
+	}
+	ns := uint64(duration.Nanoseconds())
+	m.latencyLastNS.Store(ns)
+	m.updateRecentLatency(ns)
+	updateMaxUint64(&m.latencyMaxNS, ns)
+}
+
+const (
+	latencyEWMAAlpha      = 0.2
+	ewmaUninitializedBits = 0x7ff8_0000_0000_0001
+)
+
+func (m *Monitor) updateRecentLatency(ns uint64) {
+	updateEWMA(&m.latencyRecent, float64(ns))
+}
+
+func (m *Monitor) loadRecentLatencyNS() float64 {
+	return loadEWMA(&m.latencyRecent)
+}
+
+func updateEWMA(value *atomic.Uint64, sample float64) {
+	for {
+		currentBits := value.Load()
+		next := sample
+		if currentBits != ewmaUninitializedBits {
+			current := math.Float64frombits(currentBits)
+			next = current + latencyEWMAAlpha*(sample-current)
+		}
+		if value.CompareAndSwap(currentBits, math.Float64bits(next)) {
+			return
+		}
+	}
+}
+
+func loadEWMA(value *atomic.Uint64) float64 {
+	currentBits := value.Load()
+	if currentBits == ewmaUninitializedBits {
+		return 0
+	}
+	return math.Float64frombits(currentBits)
+}
+
+func updateMaxUint64(value *atomic.Uint64, next uint64) {
+	for {
+		current := value.Load()
+		if next <= current || value.CompareAndSwap(current, next) {
+			return
+		}
+	}
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status      int
+	wroteHeader bool
+}
+
+func (r *statusRecorder) WriteHeader(status int) {
+	if r.wroteHeader {
+		return
+	}
+	r.status = status
+	r.wroteHeader = true
+	r.ResponseWriter.WriteHeader(status)
+}
+
+func (r *statusRecorder) Write(p []byte) (int, error) {
+	if !r.wroteHeader {
+		r.WriteHeader(http.StatusOK)
+	}
+	return r.ResponseWriter.Write(p)
+}
+
+func (r *statusRecorder) Unwrap() http.ResponseWriter {
+	return r.ResponseWriter
+}
+
+func (r *statusRecorder) Flush() {
+	if flusher, ok := r.ResponseWriter.(http.Flusher); ok {
+		if !r.wroteHeader {
+			r.WriteHeader(http.StatusOK)
+		}
+		flusher.Flush()
+	}
+}
+
+func (r *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hijacker, ok := r.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, fmt.Errorf("underlying ResponseWriter does not implement http.Hijacker")
+	}
+	return hijacker.Hijack()
+}
+
+func (r *statusRecorder) Push(target string, opts *http.PushOptions) error {
+	pusher, ok := r.ResponseWriter.(http.Pusher)
+	if !ok {
+		return http.ErrNotSupported
+	}
+	return pusher.Push(target, opts)
+}
+
+func (r *statusRecorder) ReadFrom(src io.Reader) (int64, error) {
+	if !r.wroteHeader {
+		r.WriteHeader(http.StatusOK)
+	}
+	if readerFrom, ok := r.ResponseWriter.(io.ReaderFrom); ok {
+		return readerFrom.ReadFrom(src)
+	}
+	return io.Copy(r.ResponseWriter, src)
 }
 
 func setMonitorHeaders(w http.ResponseWriter) {

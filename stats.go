@@ -34,5 +34,24 @@ type OSStats struct {
 
 // HTTPStats describes requests seen by the middleware.
 type HTTPStats struct {
-	TotalRequests uint64 `json:"total_requests"`
+	TotalRequests    uint64          `json:"total_requests"`
+	InFlightRequests uint64          `json:"in_flight_requests"`
+	StatusCodes      StatusCodeStats `json:"status_codes"`
+	Latency          LatencyStats    `json:"latency"`
+}
+
+// StatusCodeStats groups HTTP responses by status code class.
+type StatusCodeStats struct {
+	Status1xx uint64 `json:"1xx"`
+	Status2xx uint64 `json:"2xx"`
+	Status3xx uint64 `json:"3xx"`
+	Status4xx uint64 `json:"4xx"`
+	Status5xx uint64 `json:"5xx"`
+}
+
+// LatencyStats describes business request duration in nanoseconds.
+type LatencyStats struct {
+	LastNS   uint64  `json:"last_ns"`
+	RecentNS float64 `json:"recent_ns"`
+	MaxNS    uint64  `json:"max_ns"`
 }

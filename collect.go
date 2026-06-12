@@ -16,11 +16,30 @@ func (m *Monitor) collectOnce() {
 		PID:     collectPID(m.proc),
 		Runtime: collectRuntime(m.startedAt),
 		OS:      collectOS(),
-		HTTP: HTTPStats{
-			TotalRequests: m.requests.Load(),
-		},
+		HTTP:    m.collectHTTP(),
 	}
 	m.snapshot.Store(stats)
+}
+
+func (m *Monitor) collectHTTP() HTTPStats {
+	statusCodes := StatusCodeStats{
+		Status1xx: m.status1xx.Load(),
+		Status2xx: m.status2xx.Load(),
+		Status3xx: m.status3xx.Load(),
+		Status4xx: m.status4xx.Load(),
+		Status5xx: m.status5xx.Load(),
+	}
+
+	return HTTPStats{
+		TotalRequests:    m.requests.Load(),
+		InFlightRequests: m.inFlight.Load(),
+		StatusCodes:      statusCodes,
+		Latency: LatencyStats{
+			LastNS:   m.latencyLastNS.Load(),
+			RecentNS: m.loadRecentLatencyNS(),
+			MaxNS:    m.latencyMaxNS.Load(),
+		},
+	}
 }
 
 func collectPID(proc *process.Process) PIDStats {

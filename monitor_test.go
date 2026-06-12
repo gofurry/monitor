@@ -98,6 +98,108 @@ func TestMonitorIgnoreRequestExcludesConfiguredRequests(t *testing.T) {
 	if got := m.Current().HTTP.TotalRequests; got != 1 {
 		t.Fatalf("business requests = %d, want 1", got)
 	}
+	if got := m.Current().HTTP.StatusCodes.Status2xx; got != 1 {
+		t.Fatalf("2xx responses = %d, want 1", got)
+	}
+	if got := m.Current().HTTP.StatusCodes.Status4xx; got != 0 {
+		t.Fatalf("4xx responses = %d, want 0", got)
+	}
+	if got := m.Current().HTTP.InFlightRequests; got != 0 {
+		t.Fatalf("in-flight requests = %d, want 0", got)
+	}
+}
+
+func TestMonitorCollectsHTTPStatusLatencyAndInFlight(t *testing.T) {
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	m := NewMonitor(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/created":
+			w.WriteHeader(http.StatusCreated)
+		case "/redirect":
+			w.WriteHeader(http.StatusFound)
+		case "/missing":
+			w.WriteHeader(http.StatusNotFound)
+		case "/error":
+			w.WriteHeader(http.StatusInternalServerError)
+		case "/slow":
+			close(entered)
+			<-release
+			w.WriteHeader(http.StatusAccepted)
+		default:
+			w.WriteHeader(http.StatusNoContent)
+		}
+	}), Config{Refresh: time.Hour})
+	defer m.Stop()
+
+	for _, path := range []string{"/created", "/redirect", "/missing", "/error"} {
+		m.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, path, nil))
+	}
+
+	done := make(chan struct{})
+	go func() {
+		m.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/slow", nil))
+		close(done)
+	}()
+	<-entered
+	m.collectOnce()
+
+	if got := m.Current().HTTP.InFlightRequests; got != 1 {
+		t.Fatalf("in-flight requests = %d, want 1", got)
+	}
+
+	time.Sleep(2 * time.Millisecond)
+	close(release)
+	<-done
+	m.collectOnce()
+
+	httpStats := m.Current().HTTP
+	if httpStats.TotalRequests != 5 {
+		t.Fatalf("total requests = %d, want 5", httpStats.TotalRequests)
+	}
+	if got := httpStats.InFlightRequests; got != 0 {
+		t.Fatalf("in-flight requests after release = %d, want 0", got)
+	}
+	if got := httpStats.StatusCodes.Status2xx; got != 2 {
+		t.Fatalf("2xx responses = %d, want 2", got)
+	}
+	if got := httpStats.StatusCodes.Status3xx; got != 1 {
+		t.Fatalf("3xx responses = %d, want 1", got)
+	}
+	if got := httpStats.StatusCodes.Status4xx; got != 1 {
+		t.Fatalf("4xx responses = %d, want 1", got)
+	}
+	if got := httpStats.StatusCodes.Status5xx; got != 1 {
+		t.Fatalf("5xx responses = %d, want 1", got)
+	}
+	if httpStats.Latency.LastNS == 0 {
+		t.Fatalf("last latency = %d, want > 0", httpStats.Latency.LastNS)
+	}
+	if httpStats.Latency.RecentNS <= 0 {
+		t.Fatalf("recent latency = %f, want > 0", httpStats.Latency.RecentNS)
+	}
+	if float64(httpStats.Latency.MaxNS) < httpStats.Latency.RecentNS {
+		t.Fatalf("max latency = %d, want >= recent %f", httpStats.Latency.MaxNS, httpStats.Latency.RecentNS)
+	}
+}
+
+func TestMonitorRecordsMinimumNanosecondLatency(t *testing.T) {
+	m := NewMonitor(http.NotFoundHandler(), Config{Refresh: time.Hour})
+	defer m.Stop()
+
+	m.recordBusinessRequest(http.StatusNoContent, 0)
+	m.collectOnce()
+
+	latency := m.Current().HTTP.Latency
+	if latency.LastNS != uint64(time.Nanosecond) {
+		t.Fatalf("last latency = %d, want %d", latency.LastNS, time.Nanosecond)
+	}
+	if latency.RecentNS <= 0 {
+		t.Fatalf("recent latency = %f, want > 0", latency.RecentNS)
+	}
+	if latency.MaxNS != uint64(time.Nanosecond) {
+		t.Fatalf("max latency = %d, want %d", latency.MaxNS, time.Nanosecond)
+	}
 }
 
 func TestMonitorServesHTMLByDefault(t *testing.T) {
@@ -172,6 +274,13 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`class="status-state"`,
 		`class="header-divider"`,
 		`class="description-card"`,
+		`class="metric-card"`,
+		`class="metric-pager"`,
+		`metric-pager__prev`,
+		`metric-pager__next`,
+		`const metricsPerPage = 5`,
+		`function initMetricPagination`,
+		`row.hidden`,
 		`Page description`,
 		`Powered by github.com/gofurry/monitor - MIT License.`,
 		`grid-template-columns: minmax(0, 1fr) max-content`,
@@ -188,6 +297,17 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`width: 100%`,
 		`class="sample-toggle"`,
 		`class="sample-option"`,
+		`id="http-in-flight"`,
+		`id="http-latency-recent"`,
+		`id="http-latency-max"`,
+		`id="http-status-2xx"`,
+		`id="http-status-3xx"`,
+		`id="http-status-4xx"`,
+		`id="http-status-5xx"`,
+		`in_flight_requests`,
+		`status_codes`,
+		`recent_ns`,
+		`max_ns`,
 		`id="page-scroll-dock"`,
 		`class="page-scroll-dock"`,
 		`page-scroll-dock--visible`,
@@ -210,6 +330,8 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`let currentSampleWindow = defaultSampleWindow`,
 		`function applySampleWindow`,
 		`visibleSamples(history.pidCPU)`,
+		`function durationNS`,
+		`return Math.max(1, Math.round(n)) + " ns"`,
 		`@media (max-width: 980px)`,
 		`#9b8ae3`,
 		`rgba(155, 138, 227, 0.22)`,

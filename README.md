@@ -111,6 +111,7 @@ Requests to `Path` are always excluded from `http.total_requests`; the monitor p
 - show Go runtime metrics
 - show basic system metrics
 - count total business requests
+- track in-flight business requests, HTTP status code classes, and recent request latency
 - render short in-browser trend charts without external chart libraries
 - support light / dark / auto theme
 - support English and Simplified Chinese UI
@@ -149,7 +150,20 @@ Requests to `Path` are always excluded from `http.total_requests`; the monitor p
     "load1": 0.42
   },
   "http": {
-    "total_requests": 1024
+    "total_requests": 1024,
+    "in_flight_requests": 2,
+    "status_codes": {
+      "1xx": 0,
+      "2xx": 1000,
+      "3xx": 12,
+      "4xx": 10,
+      "5xx": 2
+    },
+    "latency": {
+      "last_ns": 812000,
+      "recent_ns": 924500,
+      "max_ns": 12000000
+    }
   }
 }
 ```
