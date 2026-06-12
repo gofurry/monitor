@@ -138,6 +138,7 @@ Requests to `Path` are always excluded from `http.total_requests`; the monitor p
   },
   "runtime": {
     "goroutines": 18,
+    "goroutine_peak": 42,
     "heap_alloc_bytes": 7327744,
     "heap_sys_bytes": 12582912,
     "heap_objects": 42011,
@@ -154,6 +155,9 @@ Requests to `Path` are always excluded from `http.total_requests`; the monitor p
     "cpu_percent": 12.8,
     "memory_used_percent": 61.5,
     "memory_total_bytes": 8589934592,
+    "disk_used_percent": 47.2,
+    "disk_total_bytes": 512110190592,
+    "disk_used_bytes": 241737318400,
     "load1": 0.42
   },
   "http": {

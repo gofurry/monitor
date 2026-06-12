@@ -210,6 +210,9 @@ func TestMonitorCollectsGCPauseStats(t *testing.T) {
 	m.gcPauseSeen.Store(true)
 
 	stats := m.collectRuntime()
+	if stats.GoroutinePeak < stats.Goroutines {
+		t.Fatalf("goroutine peak = %d, want >= current %d", stats.GoroutinePeak, stats.Goroutines)
+	}
 	if stats.HeapObjects == 0 {
 		t.Fatal("expected heap object count")
 	}
@@ -224,6 +227,19 @@ func TestMonitorCollectsGCPauseStats(t *testing.T) {
 	}
 	if stats.NumGC == 0 && stats.GCPauseLastNS != 0 {
 		t.Fatalf("gc pause last = %d, want 0 when no GC has run", stats.GCPauseLastNS)
+	}
+}
+
+func TestCollectOSIncludesDiskStats(t *testing.T) {
+	stats := collectOS()
+	if stats.DiskTotalBytes == 0 {
+		t.Fatal("expected disk total bytes")
+	}
+	if stats.DiskUsedBytes == 0 {
+		t.Fatal("expected disk used bytes")
+	}
+	if stats.DiskUsedPercent <= 0 {
+		t.Fatalf("disk used percent = %f, want > 0", stats.DiskUsedPercent)
 	}
 }
 
@@ -322,6 +338,7 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`width: 100%`,
 		`class="sample-toggle"`,
 		`class="sample-option"`,
+		`id="rt-goroutine-peak"`,
 		`id="rt-heap-objects"`,
 		`id="rt-next-gc"`,
 		`id="rt-mallocs"`,
@@ -329,6 +346,9 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`id="rt-gc-pause-last"`,
 		`id="rt-gc-pause-recent"`,
 		`id="rt-gc-pause-total"`,
+		`id="os-disk-usage"`,
+		`id="os-disk-used"`,
+		`id="os-disk-total"`,
 		`id="http-in-flight"`,
 		`id="http-latency-recent"`,
 		`id="http-latency-max"`,
@@ -337,6 +357,7 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`id="http-status-4xx"`,
 		`id="http-status-5xx"`,
 		`in_flight_requests`,
+		`goroutine_peak`,
 		`heap_objects`,
 		`next_gc_bytes`,
 		`mallocs`,
@@ -344,6 +365,9 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`gc_pause_last_ns`,
 		`gc_pause_recent_ns`,
 		`gc_pause_total_ns`,
+		`disk_used_percent`,
+		`disk_used_bytes`,
+		`disk_total_bytes`,
 		`status_codes`,
 		`recent_ns`,
 		`max_ns`,

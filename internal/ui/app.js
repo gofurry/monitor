@@ -17,6 +17,7 @@
         cpu: "CPU",
         rss: "RSS",
         goroutines: "Goroutines",
+        goroutinePeak: "Goroutine Peak",
         heapAlloc: "Heap Alloc",
         heapSys: "Heap Sys",
         heapObjects: "Heap Objects",
@@ -30,6 +31,9 @@
         uptime: "Uptime",
         memory: "Memory",
         totalRam: "Total RAM",
+        diskUsage: "Disk Usage",
+        diskUsed: "Disk Used",
+        diskTotal: "Disk Total",
         load1: "Load1",
         requests: "Requests",
         inFlight: "In-flight",
@@ -56,6 +60,7 @@
         cpu: "CPU",
         rss: "RSS",
         goroutines: "Goroutine",
+        goroutinePeak: "Goroutine 峰值",
         heapAlloc: "堆分配",
         heapSys: "堆系统",
         heapObjects: "堆对象",
@@ -69,6 +74,9 @@
         uptime: "运行时间",
         memory: "内存",
         totalRam: "总内存",
+        diskUsage: "磁盘使用率",
+        diskUsed: "磁盘已用",
+        diskTotal: "磁盘总量",
         load1: "Load1",
         requests: "请求数",
         inFlight: "处理中",
@@ -255,6 +263,7 @@
       $("pid-cpu").textContent = pct(data.pid.cpu_percent);
       $("pid-rss").textContent = bytes(data.pid.rss_bytes);
       $("rt-goroutines").textContent = nf.format(data.runtime.goroutines || 0);
+      $("rt-goroutine-peak").textContent = nf.format(data.runtime.goroutine_peak || 0);
       $("rt-heap-alloc").textContent = bytes(data.runtime.heap_alloc_bytes);
       $("rt-heap-sys").textContent = bytes(data.runtime.heap_sys_bytes);
       $("rt-heap-objects").textContent = nf.format(data.runtime.heap_objects || 0);
@@ -269,6 +278,9 @@
       $("os-cpu").textContent = pct(data.os.cpu_percent);
       $("os-memory").textContent = pct(data.os.memory_used_percent);
       $("os-total").textContent = bytes(data.os.memory_total_bytes);
+      $("os-disk-usage").textContent = pct(data.os.disk_used_percent);
+      $("os-disk-used").textContent = bytes(data.os.disk_used_bytes);
+      $("os-disk-total").textContent = bytes(data.os.disk_total_bytes);
       $("os-load").textContent = Number(data.os.load1 || 0).toFixed(2);
       $("http-requests").textContent = nf.format(data.http.total_requests || 0);
       $("http-in-flight").textContent = nf.format(data.http.in_flight_requests || 0);

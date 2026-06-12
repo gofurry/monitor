@@ -39,6 +39,7 @@ type Monitor struct {
 	latencyMaxNS  atomic.Uint64
 	gcPauseTotal  atomic.Uint64
 	gcPauseSeen   atomic.Bool
+	goroutinePeak atomic.Uint64
 	snapshot      atomic.Value // stores Stats
 
 	stopOnce sync.Once

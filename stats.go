@@ -18,6 +18,7 @@ type PIDStats struct {
 // RuntimeStats describes the Go runtime in the current process.
 type RuntimeStats struct {
 	Goroutines      int    `json:"goroutines"`
+	GoroutinePeak   int    `json:"goroutine_peak"`
 	HeapAllocBytes  uint64 `json:"heap_alloc_bytes"`
 	HeapSysBytes    uint64 `json:"heap_sys_bytes"`
 	HeapObjects     uint64 `json:"heap_objects"`
@@ -36,6 +37,9 @@ type OSStats struct {
 	CPUPercent        float64 `json:"cpu_percent"`
 	MemoryUsedPercent float64 `json:"memory_used_percent"`
 	MemoryTotalBytes  uint64  `json:"memory_total_bytes"`
+	DiskUsedPercent   float64 `json:"disk_used_percent"`
+	DiskTotalBytes    uint64  `json:"disk_total_bytes"`
+	DiskUsedBytes     uint64  `json:"disk_used_bytes"`
 	Load1             float64 `json:"load1"`
 }
 

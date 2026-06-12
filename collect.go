@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/load"
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/process"
@@ -71,9 +72,12 @@ func (m *Monitor) collectRuntime() RuntimeStats {
 	if m.gcPauseSeen.Swap(true) && pauseTotal >= pausePrevious {
 		pauseRecent = pauseTotal - pausePrevious
 	}
+	goroutines := runtime.NumGoroutine()
+	updateMaxUint64(&m.goroutinePeak, uint64(goroutines))
 
 	return RuntimeStats{
-		Goroutines:      runtime.NumGoroutine(),
+		Goroutines:      goroutines,
+		GoroutinePeak:   int(m.goroutinePeak.Load()),
 		HeapAllocBytes:  ms.HeapAlloc,
 		HeapSysBytes:    ms.HeapSys,
 		HeapObjects:     ms.HeapObjects,
@@ -104,6 +108,13 @@ func collectOS() OSStats {
 	if vm, err := mem.VirtualMemory(); err == nil && vm != nil {
 		stats.MemoryUsedPercent = vm.UsedPercent
 		stats.MemoryTotalBytes = vm.Total
+	}
+	if wd, err := os.Getwd(); err == nil {
+		if usage, err := disk.Usage(wd); err == nil && usage != nil {
+			stats.DiskUsedPercent = usage.UsedPercent
+			stats.DiskTotalBytes = usage.Total
+			stats.DiskUsedBytes = usage.Used
+		}
 	}
 	if avg, err := load.Avg(); err == nil && avg != nil {
 		stats.Load1 = avg.Load1
