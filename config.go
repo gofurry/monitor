@@ -45,6 +45,10 @@ type Config struct {
 	// 60.
 	DefaultSampleWindow int
 
+	// DiskPaths controls which filesystems are sampled for disk usage. When
+	// empty, the current working directory's filesystem is sampled.
+	DiskPaths []string
+
 	// Refresh controls how often metrics are collected in the background.
 	Refresh time.Duration
 
@@ -97,6 +101,9 @@ func applyConfig(configs []Config) Config {
 	}
 	if !isSupportedSampleWindow(cfg.DefaultSampleWindow) {
 		cfg.DefaultSampleWindow = defaultSampleWindow
+	}
+	if len(cfg.DiskPaths) > 0 {
+		cfg.DiskPaths = append([]string(nil), cfg.DiskPaths...)
 	}
 	if cfg.Refresh <= 0 {
 		cfg.Refresh = defaultRefresh

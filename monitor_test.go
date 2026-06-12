@@ -231,7 +231,9 @@ func TestMonitorCollectsGCPauseStats(t *testing.T) {
 }
 
 func TestCollectOSIncludesDiskStats(t *testing.T) {
-	stats := collectOS()
+	m := &Monitor{cfg: DefaultConfig()}
+
+	stats := m.collectOS()
 	if stats.DiskTotalBytes == 0 {
 		t.Fatal("expected disk total bytes")
 	}
@@ -240,6 +242,12 @@ func TestCollectOSIncludesDiskStats(t *testing.T) {
 	}
 	if stats.DiskUsedPercent <= 0 {
 		t.Fatalf("disk used percent = %f, want > 0", stats.DiskUsedPercent)
+	}
+	if len(stats.Disks) == 0 {
+		t.Fatal("expected disk list")
+	}
+	if stats.Disks[0].TotalBytes != stats.DiskTotalBytes {
+		t.Fatalf("first disk total = %d, want summary total %d", stats.Disks[0].TotalBytes, stats.DiskTotalBytes)
 	}
 }
 
@@ -346,9 +354,11 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`id="rt-gc-pause-last"`,
 		`id="rt-gc-pause-recent"`,
 		`id="rt-gc-pause-total"`,
-		`id="os-disk-usage"`,
-		`id="os-disk-used"`,
-		`id="os-disk-total"`,
+		`id="disk-details-button"`,
+		`id="disk-modal"`,
+		`id="disk-modal-list"`,
+		`class="metric-action"`,
+		`class="modal"`,
 		`id="http-in-flight"`,
 		`id="http-latency-recent"`,
 		`id="http-latency-max"`,
@@ -365,9 +375,12 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`gc_pause_last_ns`,
 		`gc_pause_recent_ns`,
 		`gc_pause_total_ns`,
-		`disk_used_percent`,
-		`disk_used_bytes`,
-		`disk_total_bytes`,
+		`disks`,
+		`total_bytes`,
+		`used_bytes`,
+		`free_bytes`,
+		`used_percent`,
+		`function renderDiskList`,
 		`status_codes`,
 		`recent_ns`,
 		`max_ns`,
@@ -517,6 +530,9 @@ func TestConfigDefaultsAndPathNormalization(t *testing.T) {
 	if cfg.Refresh != defaultRefresh {
 		t.Fatalf("refresh = %s, want %s", cfg.Refresh, defaultRefresh)
 	}
+	if len(cfg.DiskPaths) != 0 {
+		t.Fatalf("disk paths = %v, want empty", cfg.DiskPaths)
+	}
 }
 
 func TestConfigValidatesUIDefaults(t *testing.T) {
@@ -544,6 +560,16 @@ func TestConfigValidatesUIDefaults(t *testing.T) {
 	}
 	if invalid.DefaultSampleWindow != defaultSampleWindow {
 		t.Fatalf("default sample window = %d, want %d", invalid.DefaultSampleWindow, defaultSampleWindow)
+	}
+}
+
+func TestConfigCopiesDiskPaths(t *testing.T) {
+	paths := []string{"first", "second"}
+	cfg := applyConfig([]Config{{DiskPaths: paths}})
+	paths[0] = "changed"
+
+	if cfg.DiskPaths[0] != "first" {
+		t.Fatalf("disk paths were not copied: %v", cfg.DiskPaths)
 	}
 }
 

@@ -16,7 +16,7 @@ func (m *Monitor) collectOnce() {
 	stats := Stats{
 		PID:     collectPID(m.proc),
 		Runtime: m.collectRuntime(),
-		OS:      collectOS(),
+		OS:      m.collectOS(),
 		HTTP:    m.collectHTTP(),
 	}
 	m.snapshot.Store(stats)
@@ -100,7 +100,7 @@ func lastGCPauseNS(ms runtime.MemStats) uint64 {
 	return ms.PauseNs[index]
 }
 
-func collectOS() OSStats {
+func (m *Monitor) collectOS() OSStats {
 	var stats OSStats
 	if values, err := cpu.Percent(0, false); err == nil && len(values) > 0 {
 		stats.CPUPercent = values[0]
@@ -109,17 +109,77 @@ func collectOS() OSStats {
 		stats.MemoryUsedPercent = vm.UsedPercent
 		stats.MemoryTotalBytes = vm.Total
 	}
-	if wd, err := os.Getwd(); err == nil {
-		if usage, err := disk.Usage(wd); err == nil && usage != nil {
-			stats.DiskUsedPercent = usage.UsedPercent
-			stats.DiskTotalBytes = usage.Total
-			stats.DiskUsedBytes = usage.Used
-		}
+	stats.Disks = collectDisks(m.cfg.DiskPaths)
+	if len(stats.Disks) > 0 {
+		stats.DiskUsedPercent = stats.Disks[0].UsedPercent
+		stats.DiskTotalBytes = stats.Disks[0].TotalBytes
+		stats.DiskUsedBytes = stats.Disks[0].UsedBytes
 	}
 	if avg, err := load.Avg(); err == nil && avg != nil {
 		stats.Load1 = avg.Load1
 	}
 	return stats
+}
+
+func collectDisks(paths []string) []DiskStats {
+	targets := paths
+	if len(targets) == 0 {
+		wd, err := os.Getwd()
+		if err != nil {
+			return nil
+		}
+		targets = []string{wd}
+	}
+
+	partitions := partitionLookup()
+	disks := make([]DiskStats, 0, len(targets))
+	seen := make(map[string]struct{}, len(targets))
+	for _, path := range targets {
+		if path == "" {
+			continue
+		}
+		usage, err := disk.Usage(path)
+		if err != nil || usage == nil {
+			continue
+		}
+		key := usage.Path
+		if key == "" {
+			key = path
+		}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+
+		stat := DiskStats{
+			Path:        key,
+			Fstype:      usage.Fstype,
+			TotalBytes:  usage.Total,
+			UsedBytes:   usage.Used,
+			FreeBytes:   usage.Free,
+			UsedPercent: usage.UsedPercent,
+		}
+		if partition, ok := partitions[key]; ok {
+			stat.Device = partition.Device
+			if stat.Fstype == "" {
+				stat.Fstype = partition.Fstype
+			}
+		}
+		disks = append(disks, stat)
+	}
+	return disks
+}
+
+func partitionLookup() map[string]disk.PartitionStat {
+	partitions, err := disk.Partitions(false)
+	if err != nil {
+		return nil
+	}
+	lookup := make(map[string]disk.PartitionStat, len(partitions))
+	for _, partition := range partitions {
+		lookup[partition.Mountpoint] = partition
+	}
+	return lookup
 }
 
 func currentProcess() *process.Process {

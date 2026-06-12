@@ -31,9 +31,16 @@
         uptime: "Uptime",
         memory: "Memory",
         totalRam: "Total RAM",
+        disk: "Disk",
         diskUsage: "Disk Usage",
         diskUsed: "Disk Used",
         diskTotal: "Disk Total",
+        diskFree: "Free",
+        diskDetails: "Details",
+        diskDetailsTitle: "Disk Details",
+        diskNoData: "No disk data",
+        diskDevice: "Device",
+        diskType: "Type",
         load1: "Load1",
         requests: "Requests",
         inFlight: "In-flight",
@@ -74,9 +81,16 @@
         uptime: "运行时间",
         memory: "内存",
         totalRam: "总内存",
+        disk: "磁盘",
         diskUsage: "磁盘使用率",
         diskUsed: "磁盘已用",
         diskTotal: "磁盘总量",
+        diskFree: "空闲",
+        diskDetails: "详情",
+        diskDetailsTitle: "磁盘详情",
+        diskNoData: "暂无磁盘数据",
+        diskDevice: "设备",
+        diskType: "类型",
         load1: "Load1",
         requests: "请求数",
         inFlight: "处理中",
@@ -108,6 +122,7 @@
     let currentLang = defaultLanguage;
     let currentStatus = "live";
     let currentSampleWindow = defaultSampleWindow;
+    let currentDisks = [];
     let lastSuccessAt = 0;
 
     function storageGet(key) {
@@ -139,6 +154,7 @@
       });
       $("lang-toggle").dataset.active = currentLang;
       setStatus(currentStatus);
+      updateDiskUI();
     }
     function resolveTheme(mode) {
       if (mode === "light" || mode === "dark") return mode;
@@ -224,6 +240,91 @@
       if (n > 0) return Math.max(1, Math.round(n)) + " ns";
       return "0 ns";
     }
+    function diskCountLabel(disks) {
+      const count = disks.length;
+      if (!count) return t("diskDetails");
+      if (currentLang === "zh-CN") return nf.format(count) + " 个磁盘";
+      return nf.format(count) + " " + (count === 1 ? "disk" : "disks");
+    }
+    function clampPercent(value) {
+      return Math.min(100, Math.max(0, Number(value || 0)));
+    }
+    function appendDiskStat(parent, label, value) {
+      const row = document.createElement("div");
+      row.className = "row";
+      const dt = document.createElement("dt");
+      dt.textContent = label;
+      const dd = document.createElement("dd");
+      dd.textContent = value;
+      row.append(dt, dd);
+      parent.appendChild(row);
+    }
+    function renderDiskList() {
+      const list = $("disk-modal-list");
+      if (!list) return;
+      list.replaceChildren();
+      if (!currentDisks.length) {
+        const empty = document.createElement("div");
+        empty.className = "disk-item";
+        empty.textContent = t("diskNoData");
+        list.appendChild(empty);
+        return;
+      }
+      currentDisks.forEach(function(disk) {
+        const item = document.createElement("article");
+        item.className = "disk-item";
+
+        const head = document.createElement("div");
+        head.className = "disk-item__head";
+        const path = document.createElement("span");
+        path.className = "disk-item__path";
+        path.textContent = disk.path || "-";
+        const usage = document.createElement("span");
+        usage.className = "disk-item__usage";
+        usage.textContent = pct(disk.used_percent);
+        head.append(path, usage);
+
+        const meta = document.createElement("div");
+        meta.className = "disk-item__meta";
+        const metaParts = [];
+        if (disk.device) metaParts.push(t("diskDevice") + ": " + disk.device);
+        if (disk.fstype) metaParts.push(t("diskType") + ": " + disk.fstype);
+        meta.textContent = metaParts.join(" / ");
+
+        const meter = document.createElement("div");
+        meter.className = "disk-meter";
+        const bar = document.createElement("div");
+        bar.className = "disk-meter__bar";
+        bar.style.setProperty("--disk-used", clampPercent(disk.used_percent) + "%");
+        meter.appendChild(bar);
+
+        const dl = document.createElement("dl");
+        appendDiskStat(dl, t("diskTotal"), bytes(disk.total_bytes));
+        appendDiskStat(dl, t("diskUsed"), bytes(disk.used_bytes));
+        appendDiskStat(dl, t("diskFree"), bytes(disk.free_bytes));
+
+        item.append(head, meta, meter, dl);
+        list.appendChild(item);
+      });
+    }
+    function updateDiskUI() {
+      const button = $("disk-details-button");
+      if (button) button.textContent = diskCountLabel(currentDisks);
+      renderDiskList();
+    }
+    function openDiskModal() {
+      const modal = $("disk-modal");
+      if (!modal) return;
+      renderDiskList();
+      modal.hidden = false;
+      $("disk-modal-close").focus();
+    }
+    function closeDiskModal() {
+      const modal = $("disk-modal");
+      if (modal) modal.hidden = true;
+      const button = $("disk-details-button");
+      if (button) button.focus();
+    }
     function initMetricPagination() {
       document.querySelectorAll(".metric-card").forEach(function(card) {
         const rows = Array.from(card.querySelectorAll("dl > .row"));
@@ -278,9 +379,8 @@
       $("os-cpu").textContent = pct(data.os.cpu_percent);
       $("os-memory").textContent = pct(data.os.memory_used_percent);
       $("os-total").textContent = bytes(data.os.memory_total_bytes);
-      $("os-disk-usage").textContent = pct(data.os.disk_used_percent);
-      $("os-disk-used").textContent = bytes(data.os.disk_used_bytes);
-      $("os-disk-total").textContent = bytes(data.os.disk_total_bytes);
+      currentDisks = Array.isArray(data.os.disks) ? data.os.disks : [];
+      updateDiskUI();
       $("os-load").textContent = Number(data.os.load1 || 0).toFixed(2);
       $("http-requests").textContent = nf.format(data.http.total_requests || 0);
       $("http-in-flight").textContent = nf.format(data.http.in_flight_requests || 0);
@@ -452,6 +552,11 @@
     $("lang-toggle").addEventListener("click", nextLang);
     $("theme-toggle").addEventListener("click", nextTheme);
     $("page-scroll-dock").addEventListener("click", scrollUpQuarter);
+    $("disk-details-button").addEventListener("click", openDiskModal);
+    $("disk-modal-close").addEventListener("click", closeDiskModal);
+    $("disk-modal").addEventListener("click", function(event) {
+      if (event.target === $("disk-modal")) closeDiskModal();
+    });
     initMetricPagination();
     document.querySelectorAll(".sample-option").forEach(function(button) {
       button.addEventListener("click", function() {
@@ -467,6 +572,9 @@
       else if (themeQuery.addListener) themeQuery.addListener(onThemeChange);
     }
     window.addEventListener("scroll", updateScrollOrb, { passive: true });
+    window.addEventListener("keydown", function(event) {
+      if (event.key === "Escape" && !$("disk-modal").hidden) closeDiskModal();
+    });
     window.addEventListener("resize", function() {
       renderCharts();
       updateScrollOrb();

@@ -77,6 +77,7 @@ handler := monitor.New(mux, monitor.Config{
 	Footer:              "Copyright 2026 Example Inc.",
 	DefaultLanguage:     "en",
 	DefaultSampleWindow: 60,
+	DiskPaths:           nil,
 	Refresh:             2 * time.Second,
 	APIOnly:             false,
 	IgnoreRequest: func(r *http.Request) bool {
@@ -95,6 +96,7 @@ Defaults:
 | `Footer` | `Powered by github.com/gofurry/monitor - MIT License.` | Footer text for copyright, ownership, or license notes. |
 | `DefaultLanguage` | `en` | Initial UI language when no browser preference is saved. Supported values: `en`, `zh-CN`. |
 | `DefaultSampleWindow` | `60` | Initial trend chart sample count. Supported values: `30`, `60`, `90`. |
+| `DiskPaths` | `nil` | Filesystem paths to sample for disk usage. Empty uses the current working directory's filesystem. |
 | `Refresh` | `2s` | Background metrics collection interval. |
 | `APIOnly` | `false` | Return JSON from `Path` without serving HTML. |
 | `IgnoreRequest` | `nil` | Exclude selected requests from `http.total_requests`. |
@@ -158,6 +160,26 @@ Requests to `Path` are always excluded from `http.total_requests`; the monitor p
     "disk_used_percent": 47.2,
     "disk_total_bytes": 512110190592,
     "disk_used_bytes": 241737318400,
+    "disks": [
+      {
+        "path": "C:\\",
+        "device": "C:",
+        "fstype": "NTFS",
+        "total_bytes": 512110190592,
+        "used_bytes": 241737318400,
+        "free_bytes": 270372872192,
+        "used_percent": 47.2
+      },
+      {
+        "path": "D:\\",
+        "device": "D:",
+        "fstype": "NTFS",
+        "total_bytes": 1024209543168,
+        "used_bytes": 388547952640,
+        "free_bytes": 635661590528,
+        "used_percent": 37.9
+      }
+    ],
     "load1": 0.42
   },
   "http": {

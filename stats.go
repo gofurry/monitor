@@ -34,13 +34,25 @@ type RuntimeStats struct {
 
 // OSStats describes the host operating system.
 type OSStats struct {
-	CPUPercent        float64 `json:"cpu_percent"`
-	MemoryUsedPercent float64 `json:"memory_used_percent"`
-	MemoryTotalBytes  uint64  `json:"memory_total_bytes"`
-	DiskUsedPercent   float64 `json:"disk_used_percent"`
-	DiskTotalBytes    uint64  `json:"disk_total_bytes"`
-	DiskUsedBytes     uint64  `json:"disk_used_bytes"`
-	Load1             float64 `json:"load1"`
+	CPUPercent        float64     `json:"cpu_percent"`
+	MemoryUsedPercent float64     `json:"memory_used_percent"`
+	MemoryTotalBytes  uint64      `json:"memory_total_bytes"`
+	DiskUsedPercent   float64     `json:"disk_used_percent"`
+	DiskTotalBytes    uint64      `json:"disk_total_bytes"`
+	DiskUsedBytes     uint64      `json:"disk_used_bytes"`
+	Disks             []DiskStats `json:"disks"`
+	Load1             float64     `json:"load1"`
+}
+
+// DiskStats describes usage for one configured filesystem path.
+type DiskStats struct {
+	Path        string  `json:"path"`
+	Device      string  `json:"device,omitempty"`
+	Fstype      string  `json:"fstype,omitempty"`
+	TotalBytes  uint64  `json:"total_bytes"`
+	UsedBytes   uint64  `json:"used_bytes"`
+	FreeBytes   uint64  `json:"free_bytes"`
+	UsedPercent float64 `json:"used_percent"`
 }
 
 // HTTPStats describes requests seen by the middleware.
