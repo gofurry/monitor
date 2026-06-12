@@ -60,27 +60,28 @@ func renderHTML(cfg Config) string {
     main {
       width: min(1120px, calc(100% - 32px));
       margin: 0 auto;
-      padding: 28px 0 24px;
+      padding: 20px 0 22px;
     }
     .header {
       display: flex;
-      align-items: flex-end;
+      align-items: center;
       justify-content: space-between;
-      gap: 22px;
-      padding-bottom: 18px;
+      gap: 18px;
+      padding-bottom: 12px;
       border-bottom: 1px solid var(--border);
     }
     .header-main {
       min-width: 0;
     }
     h1 {
-      margin: 0 0 6px;
+      margin: 0;
       overflow-wrap: anywhere;
-      font-size: clamp(2rem, 4vw, 3.25rem);
-      line-height: 1;
+      font-size: clamp(1.7rem, 3.2vw, 2.7rem);
+      line-height: 1.05;
       letter-spacing: 0;
+      font-weight: 780;
     }
-    .subtitle, .meta, .footer-note {
+    .meta {
       color: var(--muted);
       font-size: 0.95rem;
     }
@@ -89,38 +90,21 @@ func renderHTML(cfg Config) string {
       justify-items: end;
       gap: 12px;
     }
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      gap: 8px;
-    }
     button {
-      min-width: 44px;
-      height: 32px;
       border: 1px solid var(--border);
-      border-radius: 8px;
       background: var(--panel);
       color: var(--text);
       cursor: pointer;
       font: inherit;
-      font-size: 0.82rem;
-      font-weight: 700;
-      transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+      transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
     }
     button:hover {
       border-color: var(--accent);
-      background: var(--accent-soft);
       transform: translateY(-1px);
-    }
-    button[aria-pressed="true"] {
-      border-color: var(--accent);
-      background: var(--accent-soft);
-      color: var(--accent);
     }
     .status-box {
       display: grid;
-      gap: 3px;
+      gap: 5px;
       color: var(--muted);
       text-align: right;
       font-size: 0.92rem;
@@ -130,9 +114,50 @@ func renderHTML(cfg Config) string {
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      gap: 8px;
+      gap: 7px;
       color: var(--text);
       font-weight: 800;
+    }
+    .status-controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-right: 5px;
+    }
+    .control-dot {
+      width: 18px;
+      height: 18px;
+      padding: 0;
+      border-radius: 50%;
+      background: var(--panel-soft);
+      box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--muted) 18%, transparent);
+    }
+    .control-dot[data-active="light"] {
+      background: #f8fafc;
+      box-shadow: inset 0 0 0 5px #facc15;
+    }
+    .control-dot[data-active="dark"] {
+      background: #111827;
+      box-shadow: inset 0 0 0 5px #67e8f9;
+    }
+    .control-dot[data-active="en"] {
+      background: #0891b2;
+      box-shadow: inset 0 0 0 5px color-mix(in srgb, #ffffff 32%, transparent);
+    }
+    .control-dot[data-active="zh-CN"] {
+      background: #16a34a;
+      box-shadow: inset 0 0 0 5px color-mix(in srgb, #ffffff 32%, transparent);
+    }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
     #live-dot {
       width: 9px;
@@ -148,6 +173,12 @@ func renderHTML(cfg Config) string {
     #live-dot[data-status="error"] {
       background: var(--bad);
       box-shadow: 0 0 0 4px color-mix(in srgb, var(--bad) 18%, transparent);
+    }
+    .status-meta {
+      display: flex;
+      justify-content: flex-end;
+      gap: 14px;
+      white-space: nowrap;
     }
     .cards, .chart-grid {
       display: grid;
@@ -238,10 +269,6 @@ func renderHTML(cfg Config) string {
       border-radius: 6px;
       background: var(--panel-soft);
     }
-    .footer-note {
-      margin-top: 18px;
-      text-align: center;
-    }
     @media (max-width: 980px) {
       .cards {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -260,7 +287,7 @@ func renderHTML(cfg Config) string {
         justify-items: start;
         text-align: left;
       }
-      .controls, .status-line {
+      .status-line, .status-meta {
         justify-content: flex-start;
       }
       .chart-grid {
@@ -274,8 +301,9 @@ func renderHTML(cfg Config) string {
       .section-title {
         display: block;
       }
-      .footer-note {
-        text-align: left;
+      .status-meta {
+        flex-wrap: wrap;
+        gap: 8px 12px;
       }
     }
   </style>
@@ -285,21 +313,18 @@ func renderHTML(cfg Config) string {
     <header class="header">
       <div class="header-main">
         <h1>{{TITLE}}</h1>
-        <div class="subtitle" data-i18n="subtitle">Real-time Go service status</div>
       </div>
       <div class="header-side">
-        <div class="controls" aria-label="Display preferences">
-          <button type="button" data-lang="en">EN</button>
-          <button type="button" data-lang="zh-CN">中</button>
-          <button type="button" id="theme-toggle">Auto</button>
-        </div>
         <div class="status-box">
           <div class="status-line">
+            <span class="status-controls" aria-label="Display preferences">
+              <button type="button" id="lang-toggle" class="control-dot" title="Language"><span class="visually-hidden">Language</span></button>
+              <button type="button" id="theme-toggle" class="control-dot" title="Theme"><span class="visually-hidden">Theme</span></button>
+            </span>
             <span id="live-dot" data-status="live"></span>
             <span id="live-text" data-i18n="live">LIVE</span>
           </div>
-          <div><span data-i18n="updated">Updated</span>: <span id="updated-at">-</span></div>
-          <div><span data-i18n="response">Response</span>: <span id="response-time">-</span></div>
+          <div class="status-meta"><span id="updated-at">-</span><span id="response-time">-</span></div>
         </div>
       </div>
     </header>
@@ -373,8 +398,6 @@ func renderHTML(cfg Config) string {
         </article>
       </div>
     </div>
-
-    <div class="footer-note" data-i18n="jsonNote">JSON via Accept: application/json · in-browser history only</div>
   </main>
 
   <script>
@@ -384,12 +407,9 @@ func renderHTML(cfg Config) string {
     const nf = new Intl.NumberFormat();
     const messages = {
       en: {
-        subtitle: "Real-time Go service status",
         live: "LIVE",
         stale: "STALE",
         error: "ERROR",
-        updated: "Updated",
-        response: "Response",
         process: "Process",
         runtime: "Runtime",
         system: "System",
@@ -410,19 +430,12 @@ func renderHTML(cfg Config) string {
         cpuTrend: "CPU",
         memoryTrend: "Memory",
         goroutineTrend: "Goroutines",
-        requestTrend: "Requests / interval",
-        jsonNote: "JSON via Accept: application/json · in-browser history only",
-        themeAuto: "Auto",
-        themeLight: "Light",
-        themeDark: "Dark"
+        requestTrend: "Requests / interval"
       },
       "zh-CN": {
-        subtitle: "实时 Go 服务状态",
         live: "运行中",
         stale: "已延迟",
         error: "错误",
-        updated: "更新于",
-        response: "响应耗时",
         process: "进程",
         runtime: "运行时",
         system: "系统",
@@ -443,13 +456,10 @@ func renderHTML(cfg Config) string {
         cpuTrend: "CPU",
         memoryTrend: "内存",
         goroutineTrend: "Goroutine",
-        requestTrend: "区间请求数",
-        jsonNote: "通过 Accept: application/json 获取 JSON · 历史仅保存在浏览器内",
-        themeAuto: "自动",
-        themeLight: "亮色",
-        themeDark: "暗色"
+        requestTrend: "区间请求数"
       }
     };
+    const languages = ["en", "zh-CN"];
     const history = {
       labels: [],
       pidCPU: [],
@@ -492,30 +502,29 @@ func renderHTML(cfg Config) string {
       document.querySelectorAll("[data-i18n]").forEach(function(el) {
         el.textContent = t(el.dataset.i18n);
       });
-      document.querySelectorAll("[data-lang]").forEach(function(button) {
-        button.setAttribute("aria-pressed", String(button.dataset.lang === currentLang));
-      });
-      updateThemeButtonText();
+      $("lang-toggle").dataset.active = currentLang;
       setStatus(currentStatus);
     }
     function resolveTheme(mode) {
       if (mode === "light" || mode === "dark") return mode;
       return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     }
-    function applyTheme(mode) {
+    function applyTheme(mode, persist) {
       if (mode !== "light" && mode !== "dark") mode = "auto";
+      const resolved = resolveTheme(mode);
       currentThemeMode = mode;
-      document.documentElement.dataset.theme = resolveTheme(mode);
-      storageSet("monitor.theme", mode);
-      updateThemeButtonText();
+      document.documentElement.dataset.theme = resolved;
+      if (persist !== false) storageSet("monitor.theme", mode);
+      $("theme-toggle").dataset.active = resolved;
       renderCharts();
     }
-    function updateThemeButtonText() {
-      const key = currentThemeMode === "light" ? "themeLight" : currentThemeMode === "dark" ? "themeDark" : "themeAuto";
-      $("theme-toggle").textContent = t(key);
-    }
     function nextTheme() {
-      applyTheme(currentThemeMode === "auto" ? "light" : currentThemeMode === "light" ? "dark" : "auto");
+      applyTheme(resolveTheme(currentThemeMode) === "dark" ? "light" : "dark");
+    }
+    function nextLang() {
+      const index = languages.indexOf(currentLang);
+      const next = languages[(index + 1) % languages.length] || "en";
+      applyLang(next);
     }
     function setStatus(status) {
       currentStatus = status;
@@ -704,16 +713,12 @@ func renderHTML(cfg Config) string {
       }
     }
 
-    document.querySelectorAll("[data-lang]").forEach(function(button) {
-      button.addEventListener("click", function() {
-        applyLang(button.dataset.lang);
-      });
-    });
+    $("lang-toggle").addEventListener("click", nextLang);
     $("theme-toggle").addEventListener("click", nextTheme);
     if (window.matchMedia) {
       const themeQuery = window.matchMedia("(prefers-color-scheme: dark)");
       const onThemeChange = function() {
-        if (currentThemeMode === "auto") applyTheme("auto");
+        if (currentThemeMode === "auto") applyTheme("auto", false);
       };
       if (themeQuery.addEventListener) themeQuery.addEventListener("change", onThemeChange);
       else if (themeQuery.addListener) themeQuery.addListener(onThemeChange);
@@ -725,7 +730,7 @@ func renderHTML(cfg Config) string {
     }, 1000);
 
     currentLang = detectLang();
-    applyTheme(storageGet("monitor.theme") || "auto");
+    applyTheme(storageGet("monitor.theme") || "auto", false);
     applyLang(currentLang);
     refresh();
     setInterval(refresh, refreshMS);

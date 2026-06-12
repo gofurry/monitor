@@ -128,8 +128,10 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 
 	body := rec.Body.String()
 	for _, want := range []string{
-		`data-lang="zh-CN"`,
+		`id="lang-toggle"`,
 		`id="theme-toggle"`,
+		`class="control-dot"`,
+		`class="status-meta"`,
 		`data-status="live"`,
 		`id="cpu-chart"`,
 		`id="memory-chart"`,
@@ -141,6 +143,16 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("HTML body does not contain %q", want)
+		}
+	}
+	for _, unwanted := range []string{
+		`Real-time Go service status`,
+		`JSON via Accept: application/json · in-browser history only`,
+		`Updated</span>`,
+		`Response</span>`,
+	} {
+		if strings.Contains(body, unwanted) {
+			t.Fatalf("HTML body contains unwanted %q", unwanted)
 		}
 	}
 }
