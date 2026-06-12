@@ -73,6 +73,27 @@ func BenchmarkMonitorBusinessRequest(b *testing.B) {
 	benchmarkTotalRequests = calls
 }
 
+func BenchmarkMonitorBusinessRequestWrite(b *testing.B) {
+	var calls uint64
+	m := NewMonitor(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		benchmarkCount(&calls)
+		_, _ = w.Write([]byte("ok"))
+	}), Config{
+		Refresh: time.Hour,
+	})
+	defer m.Stop()
+
+	req := httptest.NewRequest(http.MethodGet, "/hello", nil)
+	rw := newBenchmarkResponseWriter()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		m.ServeHTTP(rw, req)
+	}
+	benchmarkTotalRequests = calls
+}
+
 func BenchmarkMonitorBusinessRequestParallel(b *testing.B) {
 	m := NewMonitor(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
@@ -115,6 +136,17 @@ func BenchmarkMonitorIgnoredRequest(b *testing.B) {
 		m.ServeHTTP(rw, req)
 	}
 	benchmarkTotalRequests = calls
+}
+
+func BenchmarkMonitorRecordBusinessRequest(b *testing.B) {
+	m := NewMonitor(http.NotFoundHandler(), Config{Refresh: time.Hour})
+	defer m.Stop()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		m.recordBusinessRequest(http.StatusNoContent, time.Microsecond)
+	}
 }
 
 func BenchmarkMonitorJSONSnapshot(b *testing.B) {
