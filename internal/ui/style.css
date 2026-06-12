@@ -113,7 +113,7 @@
         "updated response";
       align-items: center;
       justify-content: stretch;
-      gap: 5px 18px;
+      gap: 7px 18px;
       color: var(--muted);
       text-align: right;
       font-size: 0.92rem;
@@ -124,9 +124,10 @@
     .status-controls {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 13px;
       grid-area: controls;
       justify-self: start;
+      padding-left: 4px;
     }
     .status-line {
       display: flex;
@@ -197,6 +198,7 @@
     #updated-at {
       grid-area: updated;
       justify-self: start;
+      padding-left: 4px;
       white-space: nowrap;
     }
     #response-time {
@@ -377,7 +379,7 @@
       transform: none;
     }
     .metric-action {
-      min-width: 72px;
+      min-width: 80px;
       height: 26px;
       padding: 0 10px;
       border-radius: 999px;
@@ -534,6 +536,25 @@
       display: grid;
       gap: 10px;
       padding: 14px;
+    }
+    .detail-list {
+      display: grid;
+      gap: 9px;
+      padding: 14px;
+      margin: 0;
+    }
+    .detail-list .row {
+      min-height: 0;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--panel-soft), transparent 28%);
+    }
+    .detail-list dt {
+      font-size: 0.86rem;
+    }
+    .detail-list dd {
+      font-size: 0.92rem;
     }
     .disk-item {
       display: grid;

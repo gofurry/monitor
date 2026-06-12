@@ -136,7 +136,10 @@ Requests to `Path` are always excluded from `http.total_requests`; the monitor p
 {
   "pid": {
     "cpu_percent": 2.4,
-    "rss_bytes": 48140288
+    "rss_bytes": 48140288,
+    "pid": 12345,
+    "threads": 12,
+    "fds": 32
   },
   "runtime": {
     "goroutines": 18,

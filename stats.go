@@ -13,6 +13,9 @@ type Stats struct {
 type PIDStats struct {
 	CPUPercent float64 `json:"cpu_percent"`
 	RSSBytes   uint64  `json:"rss_bytes"`
+	PID        int32   `json:"pid"`
+	Threads    int32   `json:"threads"`
+	FDs        int32   `json:"fds"`
 }
 
 // RuntimeStats describes the Go runtime in the current process.

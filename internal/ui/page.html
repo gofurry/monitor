@@ -48,6 +48,9 @@
         <dl>
           <div class="row"><dt data-i18n="cpu">CPU</dt><dd id="pid-cpu">-</dd></div>
           <div class="row"><dt data-i18n="rss">RSS</dt><dd id="pid-rss">-</dd></div>
+          <div class="row"><dt data-i18n="threads">Threads</dt><dd id="pid-threads">-</dd></div>
+          <div class="row"><dt data-i18n="pid">PID</dt><dd id="pid-id">-</dd></div>
+          <div class="row"><dt data-i18n="fds">FDs</dt><dd id="pid-fds">-</dd></div>
         </dl>
       </section>
       <section class="metric-card">
@@ -61,17 +64,9 @@
         </div>
         <dl>
           <div class="row"><dt data-i18n="goroutines">Goroutines</dt><dd id="rt-goroutines">-</dd></div>
-          <div class="row"><dt data-i18n="goroutinePeak">Goroutine Peak</dt><dd id="rt-goroutine-peak">-</dd></div>
-          <div class="row"><dt data-i18n="heapAlloc">Heap Alloc</dt><dd id="rt-heap-alloc">-</dd></div>
-          <div class="row"><dt data-i18n="heapSys">Heap Sys</dt><dd id="rt-heap-sys">-</dd></div>
-          <div class="row"><dt data-i18n="heapObjects">Heap Objects</dt><dd id="rt-heap-objects">-</dd></div>
+          <div class="row"><dt data-i18n="heap">Heap</dt><dd><button type="button" id="heap-details-button" class="metric-action">-</button></dd></div>
           <div class="row"><dt data-i18n="nextGC">Next GC</dt><dd id="rt-next-gc">-</dd></div>
-          <div class="row"><dt data-i18n="mallocs">Mallocs</dt><dd id="rt-mallocs">-</dd></div>
-          <div class="row"><dt data-i18n="frees">Frees</dt><dd id="rt-frees">-</dd></div>
-          <div class="row"><dt data-i18n="gcCount">GC Count</dt><dd id="rt-gc">-</dd></div>
-          <div class="row"><dt data-i18n="gcPauseLast">GC pause last</dt><dd id="rt-gc-pause-last">-</dd></div>
-          <div class="row"><dt data-i18n="gcPauseRecent">GC pause window</dt><dd id="rt-gc-pause-recent">-</dd></div>
-          <div class="row"><dt data-i18n="gcPauseTotal">GC pause total</dt><dd id="rt-gc-pause-total">-</dd></div>
+          <div class="row"><dt data-i18n="gc">GC</dt><dd><button type="button" id="gc-details-button" class="metric-action">-</button></dd></div>
           <div class="row"><dt data-i18n="uptime">Uptime</dt><dd id="rt-uptime">-</dd></div>
         </dl>
       </section>
@@ -106,10 +101,7 @@
           <div class="row"><dt data-i18n="inFlight">In-flight</dt><dd id="http-in-flight">-</dd></div>
           <div class="row"><dt data-i18n="recentLatency">Recent latency</dt><dd id="http-latency-recent">-</dd></div>
           <div class="row"><dt data-i18n="maxLatency">Max latency</dt><dd id="http-latency-max">-</dd></div>
-          <div class="row"><dt data-i18n="status2xx">2xx</dt><dd id="http-status-2xx">-</dd></div>
-          <div class="row"><dt data-i18n="status3xx">3xx</dt><dd id="http-status-3xx">-</dd></div>
-          <div class="row"><dt data-i18n="status4xx">4xx</dt><dd id="http-status-4xx">-</dd></div>
-          <div class="row"><dt data-i18n="status5xx">5xx</dt><dd id="http-status-5xx">-</dd></div>
+          <div class="row"><dt data-i18n="statusCodes">Status codes</dt><dd><button type="button" id="http-status-button" class="metric-action">-</button></dd></div>
         </dl>
       </section>
     </div>
@@ -176,6 +168,33 @@
         <button type="button" id="disk-modal-close" class="modal__close" aria-label="Close">x</button>
       </div>
       <div id="disk-modal-list" class="disk-list"></div>
+    </div>
+  </div>
+  <div id="heap-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="heap-modal-title" hidden>
+    <div class="modal__panel">
+      <div class="modal__head">
+        <h2 id="heap-modal-title" data-i18n="heapDetailsTitle">Heap Details</h2>
+        <button type="button" id="heap-modal-close" class="modal__close" aria-label="Close">x</button>
+      </div>
+      <dl id="heap-modal-list" class="detail-list"></dl>
+    </div>
+  </div>
+  <div id="gc-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="gc-modal-title" hidden>
+    <div class="modal__panel">
+      <div class="modal__head">
+        <h2 id="gc-modal-title" data-i18n="gcDetailsTitle">GC Details</h2>
+        <button type="button" id="gc-modal-close" class="modal__close" aria-label="Close">x</button>
+      </div>
+      <dl id="gc-modal-list" class="detail-list"></dl>
+    </div>
+  </div>
+  <div id="http-status-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="http-status-modal-title" hidden>
+    <div class="modal__panel">
+      <div class="modal__head">
+        <h2 id="http-status-modal-title" data-i18n="statusCodesTitle">HTTP Status Codes</h2>
+        <button type="button" id="http-status-modal-close" class="modal__close" aria-label="Close">x</button>
+      </div>
+      <dl id="http-status-modal-list" class="detail-list"></dl>
     </div>
   </div>
 

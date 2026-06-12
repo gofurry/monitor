@@ -36,6 +36,9 @@ func TestNewMonitorServesJSONSnapshot(t *testing.T) {
 	if stats.Runtime.Goroutines == 0 {
 		t.Fatal("expected runtime goroutine count")
 	}
+	if stats.PID.PID == 0 {
+		t.Fatal("expected process id")
+	}
 }
 
 func TestMonitorDoesNotCountMonitorRequests(t *testing.T) {
@@ -346,27 +349,32 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`width: 100%`,
 		`class="sample-toggle"`,
 		`class="sample-option"`,
-		`id="rt-goroutine-peak"`,
-		`id="rt-heap-objects"`,
+		`id="pid-threads"`,
+		`id="pid-id"`,
+		`id="pid-fds"`,
+		`id="heap-details-button"`,
 		`id="rt-next-gc"`,
-		`id="rt-mallocs"`,
-		`id="rt-frees"`,
-		`id="rt-gc-pause-last"`,
-		`id="rt-gc-pause-recent"`,
-		`id="rt-gc-pause-total"`,
+		`id="gc-details-button"`,
+		`id="heap-modal"`,
+		`id="heap-modal-list"`,
+		`id="gc-modal"`,
+		`id="gc-modal-list"`,
 		`id="disk-details-button"`,
 		`id="disk-modal"`,
 		`id="disk-modal-list"`,
 		`class="metric-action"`,
 		`class="modal"`,
+		`class="detail-list"`,
 		`id="http-in-flight"`,
 		`id="http-latency-recent"`,
 		`id="http-latency-max"`,
-		`id="http-status-2xx"`,
-		`id="http-status-3xx"`,
-		`id="http-status-4xx"`,
-		`id="http-status-5xx"`,
+		`id="http-status-button"`,
+		`id="http-status-modal"`,
+		`id="http-status-modal-list"`,
 		`in_flight_requests`,
+		`"pid"`,
+		`threads`,
+		`fds`,
 		`goroutine_peak`,
 		`heap_objects`,
 		`next_gc_bytes`,
@@ -381,6 +389,8 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`free_bytes`,
 		`used_percent`,
 		`function renderDiskList`,
+		`function updateRuntimeDetailUI`,
+		`function updateHTTPStatusUI`,
 		`status_codes`,
 		`recent_ns`,
 		`max_ns`,

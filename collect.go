@@ -49,11 +49,18 @@ func collectPID(proc *process.Process) PIDStats {
 		return stats
 	}
 
+	stats.PID = proc.Pid
 	if percent, err := proc.CPUPercent(); err == nil {
 		stats.CPUPercent = percent
 	}
 	if info, err := proc.MemoryInfo(); err == nil && info != nil {
 		stats.RSSBytes = info.RSS
+	}
+	if threads, err := proc.NumThreads(); err == nil {
+		stats.Threads = threads
+	}
+	if fds, err := proc.NumFDs(); err == nil {
+		stats.FDs = fds
 	}
 	return stats
 }

@@ -16,8 +16,12 @@
         http: "HTTP",
         cpu: "CPU",
         rss: "RSS",
-        goroutines: "Goroutines",
+        pid: "PID",
+        threads: "Threads",
+        fds: "FDs",
+        goroutines: "Goroutine / Peak",
         goroutinePeak: "Goroutine Peak",
+        heap: "Heap",
         heapAlloc: "Heap Alloc",
         heapSys: "Heap Sys",
         heapObjects: "Heap Objects",
@@ -25,9 +29,12 @@
         mallocs: "Mallocs",
         frees: "Frees",
         gcCount: "GC Count",
+        gc: "GC",
         gcPauseLast: "GC pause last",
         gcPauseRecent: "GC pause window",
         gcPauseTotal: "GC pause total",
+        heapDetailsTitle: "Heap Details",
+        gcDetailsTitle: "GC Details",
         uptime: "Uptime",
         memory: "Memory",
         totalRam: "Total RAM",
@@ -46,6 +53,9 @@
         inFlight: "In-flight",
         recentLatency: "Recent latency",
         maxLatency: "Max latency",
+        statusCodes: "Status codes",
+        statusCodesTitle: "HTTP Status Codes",
+        statusTotal: "Total",
         status2xx: "2xx",
         status3xx: "3xx",
         status4xx: "4xx",
@@ -66,8 +76,12 @@
         http: "HTTP",
         cpu: "CPU",
         rss: "RSS",
-        goroutines: "Goroutine",
+        pid: "PID",
+        threads: "线程",
+        fds: "打开文件",
+        goroutines: "Goroutine / 峰值",
         goroutinePeak: "Goroutine 峰值",
+        heap: "堆",
         heapAlloc: "堆分配",
         heapSys: "堆系统",
         heapObjects: "堆对象",
@@ -75,9 +89,12 @@
         mallocs: "分配次数",
         frees: "释放次数",
         gcCount: "GC 次数",
+        gc: "GC",
         gcPauseLast: "最近 GC 暂停",
         gcPauseRecent: "窗口 GC 暂停",
         gcPauseTotal: "累计 GC 暂停",
+        heapDetailsTitle: "堆详情",
+        gcDetailsTitle: "GC 详情",
         uptime: "运行时间",
         memory: "内存",
         totalRam: "总内存",
@@ -96,6 +113,9 @@
         inFlight: "处理中",
         recentLatency: "近期延迟",
         maxLatency: "最大延迟",
+        statusCodes: "状态码",
+        statusCodesTitle: "HTTP 状态码",
+        statusTotal: "合计",
         status2xx: "2xx",
         status3xx: "3xx",
         status4xx: "4xx",
@@ -123,6 +143,8 @@
     let currentStatus = "live";
     let currentSampleWindow = defaultSampleWindow;
     let currentDisks = [];
+    let currentRuntime = {};
+    let currentHTTPStatusCodes = {};
     let lastSuccessAt = 0;
 
     function storageGet(key) {
@@ -155,6 +177,8 @@
       $("lang-toggle").dataset.active = currentLang;
       setStatus(currentStatus);
       updateDiskUI();
+      updateRuntimeDetailUI();
+      updateHTTPStatusUI();
     }
     function resolveTheme(mode) {
       if (mode === "light" || mode === "dark") return mode;
@@ -259,6 +283,37 @@
       row.append(dt, dd);
       parent.appendChild(row);
     }
+    function appendDetailRow(parent, label, value) {
+      const row = document.createElement("div");
+      row.className = "row";
+      const dt = document.createElement("dt");
+      dt.textContent = label;
+      const dd = document.createElement("dd");
+      dd.textContent = value;
+      row.append(dt, dd);
+      parent.appendChild(row);
+    }
+    function renderDetailRows(listID, rows) {
+      const list = $(listID);
+      if (!list) return;
+      list.replaceChildren();
+      rows.forEach(function(row) {
+        appendDetailRow(list, row[0], row[1]);
+      });
+    }
+    function openModal(modalID, closeID) {
+      const modal = $(modalID);
+      if (!modal) return;
+      modal.hidden = false;
+      const close = $(closeID);
+      if (close) close.focus();
+    }
+    function closeModal(modalID, returnID) {
+      const modal = $(modalID);
+      if (modal) modal.hidden = true;
+      const button = $(returnID);
+      if (button) button.focus();
+    }
     function renderDiskList() {
       const list = $("disk-modal-list");
       if (!list) return;
@@ -313,17 +368,78 @@
       renderDiskList();
     }
     function openDiskModal() {
-      const modal = $("disk-modal");
-      if (!modal) return;
       renderDiskList();
-      modal.hidden = false;
-      $("disk-modal-close").focus();
+      openModal("disk-modal", "disk-modal-close");
     }
     function closeDiskModal() {
-      const modal = $("disk-modal");
-      if (modal) modal.hidden = true;
-      const button = $("disk-details-button");
-      if (button) button.focus();
+      closeModal("disk-modal", "disk-details-button");
+    }
+    function updateRuntimeDetailUI() {
+      const runtime = currentRuntime || {};
+      const heapButton = $("heap-details-button");
+      const gcButton = $("gc-details-button");
+      if (heapButton) heapButton.textContent = bytes(runtime.heap_alloc_bytes);
+      if (gcButton) gcButton.textContent = durationNS(runtime.gc_pause_last_ns);
+      renderDetailRows("heap-modal-list", [
+        [t("heapAlloc"), bytes(runtime.heap_alloc_bytes)],
+        [t("heapSys"), bytes(runtime.heap_sys_bytes)],
+        [t("heapObjects"), nf.format(runtime.heap_objects || 0)],
+        [t("nextGC"), bytes(runtime.next_gc_bytes)],
+        [t("mallocs"), nf.format(runtime.mallocs || 0)],
+        [t("frees"), nf.format(runtime.frees || 0)]
+      ]);
+      renderDetailRows("gc-modal-list", [
+        [t("gcCount"), nf.format(runtime.num_gc || 0)],
+        [t("gcPauseLast"), durationNS(runtime.gc_pause_last_ns)],
+        [t("gcPauseRecent"), durationNS(runtime.gc_pause_recent_ns)],
+        [t("gcPauseTotal"), durationNS(runtime.gc_pause_total_ns)]
+      ]);
+    }
+    function openHeapModal() {
+      updateRuntimeDetailUI();
+      openModal("heap-modal", "heap-modal-close");
+    }
+    function closeHeapModal() {
+      closeModal("heap-modal", "heap-details-button");
+    }
+    function openGCModal() {
+      updateRuntimeDetailUI();
+      openModal("gc-modal", "gc-modal-close");
+    }
+    function closeGCModal() {
+      closeModal("gc-modal", "gc-details-button");
+    }
+    function statusCodesTotal(codes) {
+      return (codes["1xx"] || 0) + (codes["2xx"] || 0) + (codes["3xx"] || 0) + (codes["4xx"] || 0) + (codes["5xx"] || 0);
+    }
+    function updateHTTPStatusUI() {
+      const codes = currentHTTPStatusCodes || {};
+      const button = $("http-status-button");
+      if (button) {
+        const errors = (codes["4xx"] || 0) + (codes["5xx"] || 0);
+        button.textContent = errors ? "ERR " + nf.format(errors) : "2xx " + nf.format(codes["2xx"] || 0);
+      }
+      renderDetailRows("http-status-modal-list", [
+        ["1xx", nf.format(codes["1xx"] || 0)],
+        ["2xx", nf.format(codes["2xx"] || 0)],
+        ["3xx", nf.format(codes["3xx"] || 0)],
+        ["4xx", nf.format(codes["4xx"] || 0)],
+        ["5xx", nf.format(codes["5xx"] || 0)],
+        [t("statusTotal"), nf.format(statusCodesTotal(codes))]
+      ]);
+    }
+    function openHTTPStatusModal() {
+      updateHTTPStatusUI();
+      openModal("http-status-modal", "http-status-modal-close");
+    }
+    function closeHTTPStatusModal() {
+      closeModal("http-status-modal", "http-status-button");
+    }
+    function closeVisibleModals() {
+      if (!$("disk-modal").hidden) closeDiskModal();
+      if (!$("heap-modal").hidden) closeHeapModal();
+      if (!$("gc-modal").hidden) closeGCModal();
+      if (!$("http-status-modal").hidden) closeHTTPStatusModal();
     }
     function initMetricPagination() {
       document.querySelectorAll(".metric-card").forEach(function(card) {
@@ -363,19 +479,14 @@
     function renderSnapshot(data, elapsed) {
       $("pid-cpu").textContent = pct(data.pid.cpu_percent);
       $("pid-rss").textContent = bytes(data.pid.rss_bytes);
-      $("rt-goroutines").textContent = nf.format(data.runtime.goroutines || 0);
-      $("rt-goroutine-peak").textContent = nf.format(data.runtime.goroutine_peak || 0);
-      $("rt-heap-alloc").textContent = bytes(data.runtime.heap_alloc_bytes);
-      $("rt-heap-sys").textContent = bytes(data.runtime.heap_sys_bytes);
-      $("rt-heap-objects").textContent = nf.format(data.runtime.heap_objects || 0);
-      $("rt-next-gc").textContent = bytes(data.runtime.next_gc_bytes);
-      $("rt-mallocs").textContent = nf.format(data.runtime.mallocs || 0);
-      $("rt-frees").textContent = nf.format(data.runtime.frees || 0);
-      $("rt-gc").textContent = nf.format(data.runtime.num_gc || 0);
-      $("rt-gc-pause-last").textContent = durationNS(data.runtime.gc_pause_last_ns);
-      $("rt-gc-pause-recent").textContent = durationNS(data.runtime.gc_pause_recent_ns);
-      $("rt-gc-pause-total").textContent = durationNS(data.runtime.gc_pause_total_ns);
-      $("rt-uptime").textContent = uptime(data.runtime.uptime_seconds);
+      $("pid-threads").textContent = nf.format(data.pid.threads || 0);
+      $("pid-id").textContent = nf.format(data.pid.pid || 0);
+      $("pid-fds").textContent = nf.format(data.pid.fds || 0);
+      currentRuntime = data.runtime || {};
+      $("rt-goroutines").textContent = nf.format(currentRuntime.goroutines || 0) + " / " + nf.format(currentRuntime.goroutine_peak || currentRuntime.goroutines || 0);
+      updateRuntimeDetailUI();
+      $("rt-next-gc").textContent = bytes(currentRuntime.next_gc_bytes);
+      $("rt-uptime").textContent = uptime(currentRuntime.uptime_seconds);
       $("os-cpu").textContent = pct(data.os.cpu_percent);
       $("os-memory").textContent = pct(data.os.memory_used_percent);
       $("os-total").textContent = bytes(data.os.memory_total_bytes);
@@ -386,10 +497,8 @@
       $("http-in-flight").textContent = nf.format(data.http.in_flight_requests || 0);
       $("http-latency-recent").textContent = durationNS(data.http.latency && data.http.latency.recent_ns);
       $("http-latency-max").textContent = durationNS(data.http.latency && data.http.latency.max_ns);
-      $("http-status-2xx").textContent = nf.format((data.http.status_codes && data.http.status_codes["2xx"]) || 0);
-      $("http-status-3xx").textContent = nf.format((data.http.status_codes && data.http.status_codes["3xx"]) || 0);
-      $("http-status-4xx").textContent = nf.format((data.http.status_codes && data.http.status_codes["4xx"]) || 0);
-      $("http-status-5xx").textContent = nf.format((data.http.status_codes && data.http.status_codes["5xx"]) || 0);
+      currentHTTPStatusCodes = data.http.status_codes || {};
+      updateHTTPStatusUI();
       $("updated-at").textContent = new Date().toLocaleString();
       $("response-time").textContent = elapsed.toFixed(1) + " ms";
     }
@@ -554,8 +663,23 @@
     $("page-scroll-dock").addEventListener("click", scrollUpQuarter);
     $("disk-details-button").addEventListener("click", openDiskModal);
     $("disk-modal-close").addEventListener("click", closeDiskModal);
+    $("heap-details-button").addEventListener("click", openHeapModal);
+    $("heap-modal-close").addEventListener("click", closeHeapModal);
+    $("gc-details-button").addEventListener("click", openGCModal);
+    $("gc-modal-close").addEventListener("click", closeGCModal);
+    $("http-status-button").addEventListener("click", openHTTPStatusModal);
+    $("http-status-modal-close").addEventListener("click", closeHTTPStatusModal);
     $("disk-modal").addEventListener("click", function(event) {
       if (event.target === $("disk-modal")) closeDiskModal();
+    });
+    $("heap-modal").addEventListener("click", function(event) {
+      if (event.target === $("heap-modal")) closeHeapModal();
+    });
+    $("gc-modal").addEventListener("click", function(event) {
+      if (event.target === $("gc-modal")) closeGCModal();
+    });
+    $("http-status-modal").addEventListener("click", function(event) {
+      if (event.target === $("http-status-modal")) closeHTTPStatusModal();
     });
     initMetricPagination();
     document.querySelectorAll(".sample-option").forEach(function(button) {
@@ -573,7 +697,7 @@
     }
     window.addEventListener("scroll", updateScrollOrb, { passive: true });
     window.addEventListener("keydown", function(event) {
-      if (event.key === "Escape" && !$("disk-modal").hidden) closeDiskModal();
+      if (event.key === "Escape") closeVisibleModals();
     });
     window.addEventListener("resize", function() {
       renderCharts();
