@@ -20,6 +20,10 @@ type RuntimeStats struct {
 	Goroutines      int    `json:"goroutines"`
 	HeapAllocBytes  uint64 `json:"heap_alloc_bytes"`
 	HeapSysBytes    uint64 `json:"heap_sys_bytes"`
+	HeapObjects     uint64 `json:"heap_objects"`
+	NextGCBytes     uint64 `json:"next_gc_bytes"`
+	Mallocs         uint64 `json:"mallocs"`
+	Frees           uint64 `json:"frees"`
 	NumGC           uint32 `json:"num_gc"`
 	GCPauseLastNS   uint64 `json:"gc_pause_last_ns"`
 	GCPauseTotalNS  uint64 `json:"gc_pause_total_ns"`

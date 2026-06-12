@@ -19,6 +19,10 @@
         goroutines: "Goroutines",
         heapAlloc: "Heap Alloc",
         heapSys: "Heap Sys",
+        heapObjects: "Heap Objects",
+        nextGC: "Next GC",
+        mallocs: "Mallocs",
+        frees: "Frees",
         gcCount: "GC Count",
         gcPauseLast: "GC pause last",
         gcPauseRecent: "GC pause window",
@@ -54,6 +58,10 @@
         goroutines: "Goroutine",
         heapAlloc: "堆分配",
         heapSys: "堆系统",
+        heapObjects: "堆对象",
+        nextGC: "下次 GC",
+        mallocs: "分配次数",
+        frees: "释放次数",
         gcCount: "GC 次数",
         gcPauseLast: "最近 GC 暂停",
         gcPauseRecent: "窗口 GC 暂停",
@@ -249,6 +257,10 @@
       $("rt-goroutines").textContent = nf.format(data.runtime.goroutines || 0);
       $("rt-heap-alloc").textContent = bytes(data.runtime.heap_alloc_bytes);
       $("rt-heap-sys").textContent = bytes(data.runtime.heap_sys_bytes);
+      $("rt-heap-objects").textContent = nf.format(data.runtime.heap_objects || 0);
+      $("rt-next-gc").textContent = bytes(data.runtime.next_gc_bytes);
+      $("rt-mallocs").textContent = nf.format(data.runtime.mallocs || 0);
+      $("rt-frees").textContent = nf.format(data.runtime.frees || 0);
       $("rt-gc").textContent = nf.format(data.runtime.num_gc || 0);
       $("rt-gc-pause-last").textContent = durationNS(data.runtime.gc_pause_last_ns);
       $("rt-gc-pause-recent").textContent = durationNS(data.runtime.gc_pause_recent_ns);

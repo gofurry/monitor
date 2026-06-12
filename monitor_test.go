@@ -210,6 +210,15 @@ func TestMonitorCollectsGCPauseStats(t *testing.T) {
 	m.gcPauseSeen.Store(true)
 
 	stats := m.collectRuntime()
+	if stats.HeapObjects == 0 {
+		t.Fatal("expected heap object count")
+	}
+	if stats.NextGCBytes == 0 {
+		t.Fatal("expected next GC target")
+	}
+	if stats.Mallocs == 0 {
+		t.Fatal("expected malloc count")
+	}
 	if stats.GCPauseRecentNS != stats.GCPauseTotalNS {
 		t.Fatalf("gc pause recent = %d, want %d", stats.GCPauseRecentNS, stats.GCPauseTotalNS)
 	}
@@ -313,6 +322,10 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`width: 100%`,
 		`class="sample-toggle"`,
 		`class="sample-option"`,
+		`id="rt-heap-objects"`,
+		`id="rt-next-gc"`,
+		`id="rt-mallocs"`,
+		`id="rt-frees"`,
 		`id="rt-gc-pause-last"`,
 		`id="rt-gc-pause-recent"`,
 		`id="rt-gc-pause-total"`,
@@ -324,6 +337,10 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`id="http-status-4xx"`,
 		`id="http-status-5xx"`,
 		`in_flight_requests`,
+		`heap_objects`,
+		`next_gc_bytes`,
+		`mallocs`,
+		`frees`,
 		`gc_pause_last_ns`,
 		`gc_pause_recent_ns`,
 		`gc_pause_total_ns`,
