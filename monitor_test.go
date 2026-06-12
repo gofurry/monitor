@@ -27,6 +27,7 @@ func TestNewMonitorServesJSONSnapshot(t *testing.T) {
 	if got := rec.Header().Get("Content-Type"); !strings.Contains(got, "application/json") {
 		t.Fatalf("content type = %q, want application/json", got)
 	}
+	assertMonitorHeaders(t, rec)
 
 	var stats Stats
 	if err := json.Unmarshal(rec.Body.Bytes(), &stats); err != nil {
@@ -115,6 +116,7 @@ func TestMonitorServesHTMLByDefault(t *testing.T) {
 	if body := rec.Body.String(); !strings.Contains(body, "My App") {
 		t.Fatalf("HTML body does not contain title: %q", body)
 	}
+	assertMonitorHeaders(t, rec)
 }
 
 func TestAPIOnlyServesJSONWithoutAcceptHeader(t *testing.T) {
@@ -132,6 +134,27 @@ func TestAPIOnlyServesJSONWithoutAcceptHeader(t *testing.T) {
 	}
 }
 
+func TestMonitorAllowsOnlyGetAndHead(t *testing.T) {
+	m := NewMonitor(http.NotFoundHandler(), Config{Refresh: time.Hour})
+	defer m.Stop()
+
+	head := httptest.NewRecorder()
+	m.ServeHTTP(head, httptest.NewRequest(http.MethodHead, "/monitor", nil))
+	if head.Code != http.StatusOK {
+		t.Fatalf("HEAD status = %d, want %d", head.Code, http.StatusOK)
+	}
+
+	post := httptest.NewRecorder()
+	m.ServeHTTP(post, httptest.NewRequest(http.MethodPost, "/monitor", nil))
+	if post.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("POST status = %d, want %d", post.Code, http.StatusMethodNotAllowed)
+	}
+	if got := post.Header().Get("Allow"); got != "GET, HEAD" {
+		t.Fatalf("Allow = %q, want %q", got, "GET, HEAD")
+	}
+	assertMonitorHeaders(t, post)
+}
+
 func TestConfigDefaultsAndPathNormalization(t *testing.T) {
 	cfg := applyConfig([]Config{{Path: "status"}})
 
@@ -143,5 +166,15 @@ func TestConfigDefaultsAndPathNormalization(t *testing.T) {
 	}
 	if cfg.Refresh != defaultRefresh {
 		t.Fatalf("refresh = %s, want %s", cfg.Refresh, defaultRefresh)
+	}
+}
+
+func assertMonitorHeaders(t *testing.T, rec *httptest.ResponseRecorder) {
+	t.Helper()
+	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
+		t.Fatalf("Cache-Control = %q, want %q", got, "no-store")
+	}
+	if got := rec.Header().Get("X-Content-Type-Options"); got != "nosniff" {
+		t.Fatalf("X-Content-Type-Options = %q, want %q", got, "nosniff")
 	}
 }

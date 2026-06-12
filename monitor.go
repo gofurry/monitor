@@ -109,6 +109,13 @@ func (m *Monitor) start() {
 }
 
 func (m *Monitor) serveMonitor(w http.ResponseWriter, r *http.Request) {
+	setMonitorHeaders(w)
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	if m.cfg.APIOnly || wantsJSON(r) {
 		m.serveJSON(w)
 		return
@@ -118,6 +125,11 @@ func (m *Monitor) serveMonitor(w http.ResponseWriter, r *http.Request) {
 
 func (m *Monitor) ignoreRequest(r *http.Request) bool {
 	return m.cfg.IgnoreRequest != nil && m.cfg.IgnoreRequest(r)
+}
+
+func setMonitorHeaders(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 }
 
 func (m *Monitor) serveJSON(w http.ResponseWriter) {
