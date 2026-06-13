@@ -56,12 +56,77 @@
     body {
       margin: 0;
       min-height: 100vh;
+      position: relative;
       background: var(--bg);
       color: var(--text);
       font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       line-height: 1.45;
     }
+    [data-background="grid"] body {
+      background:
+        radial-gradient(circle at 14% 16%, rgba(255, 238, 214, 0.52), transparent 28%),
+        radial-gradient(circle at 82% 10%, rgba(229, 223, 215, 0.46), transparent 30%),
+        linear-gradient(180deg, rgba(255, 250, 244, 0.90), rgba(242, 227, 208, 0.96)),
+        #f2e3d0;
+    }
+    [data-theme="dark"][data-background="grid"] body {
+      background:
+        radial-gradient(circle at 50% 42%, rgba(45, 212, 191, 0.14), transparent 92%),
+        linear-gradient(180deg, rgba(8, 14, 28, 0.96), rgba(18, 28, 45, 0.985)),
+        #0b1220;
+    }
+    [data-background="grid"] body::before,
+    [data-background="grid"] body::after {
+      content: "";
+      pointer-events: none;
+      position: fixed;
+      inset: -1px;
+      z-index: 0;
+      opacity: 0.88;
+    }
+    [data-background="grid"] body::before {
+      background: repeating-linear-gradient(
+        90deg,
+        rgba(105, 78, 57, 0.28) 0,
+        rgba(105, 78, 57, 0.28) 1px,
+        transparent 1px,
+        transparent 38px
+      );
+      -webkit-mask-image: repeating-linear-gradient(0deg, #000 0, #000 3px, transparent 3px, transparent 7px);
+      mask-image: repeating-linear-gradient(0deg, #000 0, #000 3px, transparent 3px, transparent 7px);
+    }
+    [data-background="grid"] body::after {
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(105, 78, 57, 0.24) 0,
+        rgba(105, 78, 57, 0.24) 1px,
+        transparent 1px,
+        transparent 38px
+      );
+      -webkit-mask-image: repeating-linear-gradient(90deg, #000 0, #000 3px, transparent 3px, transparent 7px);
+      mask-image: repeating-linear-gradient(90deg, #000 0, #000 3px, transparent 3px, transparent 7px);
+    }
+    [data-theme="dark"][data-background="grid"] body::before {
+      background: repeating-linear-gradient(
+        90deg,
+        rgba(148, 163, 184, 0.28) 0,
+        rgba(148, 163, 184, 0.28) 1px,
+        transparent 1px,
+        transparent 38px
+      );
+    }
+    [data-theme="dark"][data-background="grid"] body::after {
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(148, 163, 184, 0.26) 0,
+        rgba(148, 163, 184, 0.26) 1px,
+        transparent 1px,
+        transparent 38px
+      );
+    }
     main {
+      position: relative;
+      z-index: 1;
       width: min(1360px, calc(100% - 32px));
       margin: 0 auto;
       padding: 20px 0 22px;

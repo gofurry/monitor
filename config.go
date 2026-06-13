@@ -11,6 +11,8 @@ const (
 	defaultDescription  = "Live process, runtime, system, and HTTP metrics for this Go service."
 	defaultFooter       = "Powered by github.com/gofurry/monitor - MIT License."
 	defaultLanguage     = "en"
+	defaultTheme        = "dark"
+	defaultBackground   = "solid"
 	defaultSampleWindow = 60
 	defaultRefresh      = 2 * time.Second
 )
@@ -18,8 +20,8 @@ const (
 // Config controls the monitor middleware.
 //
 // The zero value is valid and uses Path "/monitor", Title "Monitor", a short
-// page description, an MIT License footer, English UI, 60 trend samples, and a
-// refresh interval of 2 seconds.
+// page description, an MIT License footer, English UI, dark theme, solid
+// background, 60 trend samples, and a refresh interval of 2 seconds.
 type Config struct {
 	// Path is the endpoint used for the HTML page and JSON snapshot.
 	Path string
@@ -39,6 +41,15 @@ type Config struct {
 	// no saved monitor language preference. Supported values are "en" and
 	// "zh-CN". Empty or unsupported values use "en".
 	DefaultLanguage string
+
+	// DefaultTheme controls the initial HTML UI theme when the browser has no
+	// saved monitor theme preference. Supported values are "light" and "dark".
+	// Empty or unsupported values use "dark".
+	DefaultTheme string
+
+	// Background controls the HTML page background. Supported values are
+	// "solid" and "grid". Empty or unsupported values use "solid".
+	Background string
 
 	// DefaultSampleWindow controls the initial number of trend samples shown in
 	// charts. Supported values are 30, 60, and 90. Zero or unsupported values use
@@ -71,6 +82,8 @@ func DefaultConfig() Config {
 		Description:         defaultDescription,
 		Footer:              defaultFooter,
 		DefaultLanguage:     defaultLanguage,
+		DefaultTheme:        defaultTheme,
+		Background:          defaultBackground,
 		DefaultSampleWindow: defaultSampleWindow,
 		Refresh:             defaultRefresh,
 	}
@@ -99,6 +112,12 @@ func applyConfig(configs []Config) Config {
 	if !isSupportedLanguage(cfg.DefaultLanguage) {
 		cfg.DefaultLanguage = defaultLanguage
 	}
+	if !isSupportedTheme(cfg.DefaultTheme) {
+		cfg.DefaultTheme = defaultTheme
+	}
+	if !isSupportedBackground(cfg.Background) {
+		cfg.Background = defaultBackground
+	}
 	if !isSupportedSampleWindow(cfg.DefaultSampleWindow) {
 		cfg.DefaultSampleWindow = defaultSampleWindow
 	}
@@ -113,6 +132,14 @@ func applyConfig(configs []Config) Config {
 
 func isSupportedLanguage(lang string) bool {
 	return lang == "en" || lang == "zh-CN"
+}
+
+func isSupportedTheme(theme string) bool {
+	return theme == "light" || theme == "dark"
+}
+
+func isSupportedBackground(background string) bool {
+	return background == "solid" || background == "grid"
 }
 
 func isSupportedSampleWindow(samples int) bool {
