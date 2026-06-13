@@ -1,5 +1,6 @@
     const refreshMS = monitorConfig.refreshMS;
     const defaultLanguage = monitorConfig.defaultLanguage;
+    const defaultTheme = monitorConfig.defaultTheme;
     const defaultSampleWindow = monitorConfig.defaultSampleWindow;
     const maxPoints = 90;
     const metricsPerPage = 5;
@@ -162,7 +163,7 @@
       gcPauseLastNS: []
     };
     let previousSnapshot = null;
-    let currentThemeMode = "auto";
+    let currentThemeMode = defaultTheme;
     let currentLang = defaultLanguage;
     let currentStatus = "live";
     let currentSampleWindow = defaultSampleWindow;
@@ -206,10 +207,10 @@
     }
     function resolveTheme(mode) {
       if (mode === "light" || mode === "dark") return mode;
-      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      return defaultTheme === "light" ? "light" : "dark";
     }
     function applyTheme(mode, persist) {
-      if (mode !== "light" && mode !== "dark") mode = "auto";
+      mode = resolveTheme(mode);
       const resolved = resolveTheme(mode);
       currentThemeMode = mode;
       document.documentElement.dataset.theme = resolved;
@@ -218,7 +219,7 @@
       renderCharts();
     }
     function nextTheme() {
-      applyTheme(resolveTheme(currentThemeMode) === "dark" ? "light" : "dark");
+      applyTheme(currentThemeMode === "dark" ? "light" : "dark");
     }
     function nextLang() {
       const index = languages.indexOf(currentLang);
@@ -736,14 +737,6 @@
         applySampleWindow(button.dataset.samples);
       });
     });
-    if (window.matchMedia) {
-      const themeQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      const onThemeChange = function() {
-        if (currentThemeMode === "auto") applyTheme("auto", false);
-      };
-      if (themeQuery.addEventListener) themeQuery.addEventListener("change", onThemeChange);
-      else if (themeQuery.addListener) themeQuery.addListener(onThemeChange);
-    }
     window.addEventListener("scroll", updateScrollOrb, { passive: true });
     window.addEventListener("keydown", function(event) {
       if (event.key === "Escape") closeVisibleModals();
@@ -758,7 +751,7 @@
     }, 1000);
 
     currentLang = detectLang();
-    applyTheme(storageGet("monitor.theme") || "auto", false);
+    applyTheme(storageGet("monitor.theme") || defaultTheme, false);
     applySampleWindow(defaultSampleWindow);
     applyLang(currentLang);
     updateScrollOrb();

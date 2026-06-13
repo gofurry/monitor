@@ -35,6 +35,7 @@ func main() {
 		Footer:              "Powered by github.com/gofurry/monitor - MIT License.",
 		Description:         "Live process, runtime, system, and HTTP metrics for this Go service.",
 		DefaultLanguage:     "en",
+		DefaultTheme:        "dark",
 		DefaultSampleWindow: 60,
 		DiskPaths:           nil, // "nil" represents the observation of only the services currently deployed.
 		// DiskPaths:           []string{"C:\\", "D:\\"},
