@@ -26,6 +26,10 @@
 
 趋势图只保留很短的浏览器内历史。服务端不存储指标。进程重启后，内存计数器和图表历史都会清空。
 
+<p align="center">
+  <img src="../releases/preview.png" alt="monitor 状态页预览">
+</p>
+
 ## 安装
 
 ```sh

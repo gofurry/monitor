@@ -29,6 +29,10 @@ It includes:
 
 Charts keep only short in-browser history. Metrics are not stored server-side. Restarting the process clears in-memory counters and chart history.
 
+<p align="center">
+  <img src="docs/releases/preview.png" alt="monitor status page preview">
+</p>
+
 ## Installation
 
 ```sh
