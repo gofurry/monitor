@@ -1,3 +1,5 @@
+# monitor
+
 <p align="center">
   <img src="https://img.shields.io/badge/License-MIT-6C757D?style=flat&color=3B82F6" alt="License">&nbsp&nbsp&nbsp
   <img src="https://img.shields.io/badge/Go-1.24%2B-00ADD8?style=flat&logo=go&logoColor=white" alt="Go Version">&nbsp&nbsp&nbsp
@@ -23,6 +25,7 @@ The status page is fully embedded and requires no frontend build step or externa
 It includes:
 
 - light / dark theme
+- solid / grid background
 - English and Simplified Chinese UI
 - LIVE / STALE / ERROR status
 - small in-browser trend charts powered by native Canvas
@@ -114,6 +117,7 @@ handler := monitor.New(mux, monitor.Config{
 	Footer:              "Copyright 2026 Example Inc.",
 	DefaultLanguage:     "en",
 	DefaultTheme:        "dark",
+	Background:          "solid",
 	DefaultSampleWindow: 60,
 	DiskPaths:           nil,
 	Refresh:             2 * time.Second,
@@ -134,6 +138,7 @@ Defaults:
 | `Footer` | `Powered by github.com/gofurry/monitor - MIT License.` | Footer text for copyright, ownership, or license notes. |
 | `DefaultLanguage` | `en` | Initial UI language when no browser preference is saved. Supported values: `en`, `zh-CN`. |
 | `DefaultTheme` | `dark` | Initial UI theme when no browser preference is saved. Supported values: `light`, `dark`. |
+| `Background` | `solid` | HTML page background. Supported values: `solid`, `grid`. |
 | `DefaultSampleWindow` | `60` | Initial trend chart sample count. Supported values: `30`, `60`, `90`. |
 | `DiskPaths` | `nil` | Filesystem paths to sample for disk usage. Empty uses the current working directory's filesystem. |
 | `Refresh` | `2s` | Background metrics collection interval. |

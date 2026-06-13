@@ -18,6 +18,7 @@
 它包含：
 
 - 亮色 / 暗色主题
+- 纯色 / 网格背景
 - 英文和简体中文界面
 - LIVE / STALE / ERROR 状态
 - 基于原生 Canvas 的短期浏览器内趋势图
@@ -109,6 +110,7 @@ handler := monitor.New(mux, monitor.Config{
 	Footer:              "Copyright 2026 Example Inc.",
 	DefaultLanguage:     "en",
 	DefaultTheme:        "dark",
+	Background:          "solid",
 	DefaultSampleWindow: 60,
 	DiskPaths:           nil,
 	Refresh:             2 * time.Second,
@@ -129,6 +131,7 @@ handler := monitor.New(mux, monitor.Config{
 | `Footer` | `Powered by github.com/gofurry/monitor - MIT License.` | 页脚文本，可用于版权、归属或许可证说明。 |
 | `DefaultLanguage` | `en` | 浏览器没有保存偏好时的初始 UI 语言。支持值：`en`、`zh-CN`。 |
 | `DefaultTheme` | `dark` | 浏览器没有保存偏好时的初始 UI 主题。支持值：`light`、`dark`。 |
+| `Background` | `solid` | HTML 页面背景。支持值：`solid`、`grid`。 |
 | `DefaultSampleWindow` | `60` | 趋势图初始采样点数量。支持值：`30`、`60`、`90`。 |
 | `DiskPaths` | `nil` | 要采样磁盘使用率的文件系统路径。为空时采样当前工作目录所在文件系统。 |
 | `Refresh` | `2s` | 后台指标采集间隔。 |

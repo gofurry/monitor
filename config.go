@@ -12,6 +12,7 @@ const (
 	defaultFooter       = "Powered by github.com/gofurry/monitor - MIT License."
 	defaultLanguage     = "en"
 	defaultTheme        = "dark"
+	defaultBackground   = "solid"
 	defaultSampleWindow = 60
 	defaultRefresh      = 2 * time.Second
 )
@@ -19,8 +20,8 @@ const (
 // Config controls the monitor middleware.
 //
 // The zero value is valid and uses Path "/monitor", Title "Monitor", a short
-// page description, an MIT License footer, English UI, dark theme, 60 trend
-// samples, and a refresh interval of 2 seconds.
+// page description, an MIT License footer, English UI, dark theme, solid
+// background, 60 trend samples, and a refresh interval of 2 seconds.
 type Config struct {
 	// Path is the endpoint used for the HTML page and JSON snapshot.
 	Path string
@@ -45,6 +46,10 @@ type Config struct {
 	// saved monitor theme preference. Supported values are "light" and "dark".
 	// Empty or unsupported values use "dark".
 	DefaultTheme string
+
+	// Background controls the HTML page background. Supported values are
+	// "solid" and "grid". Empty or unsupported values use "solid".
+	Background string
 
 	// DefaultSampleWindow controls the initial number of trend samples shown in
 	// charts. Supported values are 30, 60, and 90. Zero or unsupported values use
@@ -78,6 +83,7 @@ func DefaultConfig() Config {
 		Footer:              defaultFooter,
 		DefaultLanguage:     defaultLanguage,
 		DefaultTheme:        defaultTheme,
+		Background:          defaultBackground,
 		DefaultSampleWindow: defaultSampleWindow,
 		Refresh:             defaultRefresh,
 	}
@@ -109,6 +115,9 @@ func applyConfig(configs []Config) Config {
 	if !isSupportedTheme(cfg.DefaultTheme) {
 		cfg.DefaultTheme = defaultTheme
 	}
+	if !isSupportedBackground(cfg.Background) {
+		cfg.Background = defaultBackground
+	}
 	if !isSupportedSampleWindow(cfg.DefaultSampleWindow) {
 		cfg.DefaultSampleWindow = defaultSampleWindow
 	}
@@ -127,6 +136,10 @@ func isSupportedLanguage(lang string) bool {
 
 func isSupportedTheme(theme string) bool {
 	return theme == "light" || theme == "dark"
+}
+
+func isSupportedBackground(background string) bool {
+	return background == "solid" || background == "grid"
 }
 
 func isSupportedSampleWindow(samples int) bool {

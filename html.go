@@ -27,6 +27,7 @@ type monitorPageData struct {
 	JS               template.JS
 	ConfigJSON       template.JS
 	DefaultTheme     string
+	Background       string
 	Samples30Pressed bool
 	Samples60Pressed bool
 	Samples90Pressed bool
@@ -56,6 +57,7 @@ func renderHTML(cfg Config) string {
 		JS:               template.JS(monitorAppJS),
 		ConfigJSON:       template.JS(configJSON),
 		DefaultTheme:     cfg.DefaultTheme,
+		Background:       cfg.Background,
 		Samples30Pressed: cfg.DefaultSampleWindow == 30,
 		Samples60Pressed: cfg.DefaultSampleWindow == 60,
 		Samples90Pressed: cfg.DefaultSampleWindow == 90,

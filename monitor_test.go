@@ -417,6 +417,10 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`function scrollUpQuarter`,
 		`--scroll-progress`,
 		`aria-valuenow`,
+		`data-background="solid"`,
+		`[data-background="grid"] body`,
+		`radial-gradient(circle at 14% 16%, rgba(255, 238, 214, 0.52), transparent 28%)`,
+		`radial-gradient(circle at 50% 42%, rgba(45, 212, 191, 0.14), transparent 92%)`,
 		`data-samples="30"`,
 		`data-samples="60" aria-pressed="true"`,
 		`data-samples="90"`,
@@ -476,6 +480,7 @@ func TestMonitorHTMLUsesConfiguredUIDefaults(t *testing.T) {
 	m := NewMonitor(http.NotFoundHandler(), Config{
 		DefaultLanguage:     "zh-CN",
 		DefaultTheme:        "light",
+		Background:          "grid",
 		DefaultSampleWindow: 30,
 		Refresh:             time.Hour,
 	})
@@ -486,7 +491,7 @@ func TestMonitorHTMLUsesConfiguredUIDefaults(t *testing.T) {
 
 	body := rec.Body.String()
 	for _, want := range []string{
-		`<html lang="en" data-theme="light">`,
+		`<html lang="en" data-theme="light" data-background="grid">`,
 		`"defaultLanguage":"zh-CN"`,
 		`"defaultTheme":"light"`,
 		`"defaultSampleWindow":30`,
@@ -558,6 +563,9 @@ func TestConfigDefaultsAndPathNormalization(t *testing.T) {
 	if cfg.DefaultTheme != defaultTheme {
 		t.Fatalf("default theme = %q, want %q", cfg.DefaultTheme, defaultTheme)
 	}
+	if cfg.Background != defaultBackground {
+		t.Fatalf("background = %q, want %q", cfg.Background, defaultBackground)
+	}
 	if cfg.DefaultSampleWindow != defaultSampleWindow {
 		t.Fatalf("default sample window = %d, want %d", cfg.DefaultSampleWindow, defaultSampleWindow)
 	}
@@ -574,6 +582,7 @@ func TestConfigValidatesUIDefaults(t *testing.T) {
 		{
 			DefaultLanguage:     "zh-CN",
 			DefaultTheme:        "light",
+			Background:          "grid",
 			DefaultSampleWindow: 90,
 		},
 	})
@@ -586,11 +595,15 @@ func TestConfigValidatesUIDefaults(t *testing.T) {
 	if valid.DefaultTheme != "light" {
 		t.Fatalf("default theme = %q, want light", valid.DefaultTheme)
 	}
+	if valid.Background != "grid" {
+		t.Fatalf("background = %q, want grid", valid.Background)
+	}
 
 	invalid := applyConfig([]Config{
 		{
 			DefaultLanguage:     "fr",
 			DefaultTheme:        "auto",
+			Background:          "image",
 			DefaultSampleWindow: 45,
 		},
 	})
@@ -602,6 +615,9 @@ func TestConfigValidatesUIDefaults(t *testing.T) {
 	}
 	if invalid.DefaultTheme != defaultTheme {
 		t.Fatalf("default theme = %q, want %q", invalid.DefaultTheme, defaultTheme)
+	}
+	if invalid.Background != defaultBackground {
+		t.Fatalf("background = %q, want %q", invalid.Background, defaultBackground)
 	}
 }
 
