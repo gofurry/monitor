@@ -423,10 +423,13 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`window.monitorConfig =`,
 		`const maxPoints = 90`,
 		`"defaultLanguage":"en"`,
+		`"defaultTheme":"dark"`,
 		`"defaultSampleWindow":60`,
 		`const defaultLanguage = monitorConfig.defaultLanguage`,
+		`const defaultTheme = monitorConfig.defaultTheme`,
 		`const defaultSampleWindow = monitorConfig.defaultSampleWindow`,
 		`let currentLang = defaultLanguage`,
+		`let currentThemeMode = defaultTheme`,
 		`let currentSampleWindow = defaultSampleWindow`,
 		`function applySampleWindow`,
 		`visibleSamples(history.pidCPU)`,
@@ -472,6 +475,7 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 func TestMonitorHTMLUsesConfiguredUIDefaults(t *testing.T) {
 	m := NewMonitor(http.NotFoundHandler(), Config{
 		DefaultLanguage:     "zh-CN",
+		DefaultTheme:        "light",
 		DefaultSampleWindow: 30,
 		Refresh:             time.Hour,
 	})
@@ -482,10 +486,13 @@ func TestMonitorHTMLUsesConfiguredUIDefaults(t *testing.T) {
 
 	body := rec.Body.String()
 	for _, want := range []string{
+		`<html lang="en" data-theme="light">`,
 		`"defaultLanguage":"zh-CN"`,
+		`"defaultTheme":"light"`,
 		`"defaultSampleWindow":30`,
 		`data-samples="30" aria-pressed="true"`,
 		`data-samples="60" aria-pressed="false"`,
+		`applyTheme(storageGet("monitor.theme") || defaultTheme, false)`,
 		`applySampleWindow(defaultSampleWindow)`,
 	} {
 		if !strings.Contains(body, want) {
@@ -548,6 +555,9 @@ func TestConfigDefaultsAndPathNormalization(t *testing.T) {
 	if cfg.DefaultLanguage != defaultLanguage {
 		t.Fatalf("default language = %q, want %q", cfg.DefaultLanguage, defaultLanguage)
 	}
+	if cfg.DefaultTheme != defaultTheme {
+		t.Fatalf("default theme = %q, want %q", cfg.DefaultTheme, defaultTheme)
+	}
 	if cfg.DefaultSampleWindow != defaultSampleWindow {
 		t.Fatalf("default sample window = %d, want %d", cfg.DefaultSampleWindow, defaultSampleWindow)
 	}
@@ -563,6 +573,7 @@ func TestConfigValidatesUIDefaults(t *testing.T) {
 	valid := applyConfig([]Config{
 		{
 			DefaultLanguage:     "zh-CN",
+			DefaultTheme:        "light",
 			DefaultSampleWindow: 90,
 		},
 	})
@@ -572,10 +583,14 @@ func TestConfigValidatesUIDefaults(t *testing.T) {
 	if valid.DefaultSampleWindow != 90 {
 		t.Fatalf("default sample window = %d, want 90", valid.DefaultSampleWindow)
 	}
+	if valid.DefaultTheme != "light" {
+		t.Fatalf("default theme = %q, want light", valid.DefaultTheme)
+	}
 
 	invalid := applyConfig([]Config{
 		{
 			DefaultLanguage:     "fr",
+			DefaultTheme:        "auto",
 			DefaultSampleWindow: 45,
 		},
 	})
@@ -584,6 +599,9 @@ func TestConfigValidatesUIDefaults(t *testing.T) {
 	}
 	if invalid.DefaultSampleWindow != defaultSampleWindow {
 		t.Fatalf("default sample window = %d, want %d", invalid.DefaultSampleWindow, defaultSampleWindow)
+	}
+	if invalid.DefaultTheme != defaultTheme {
+		t.Fatalf("default theme = %q, want %q", invalid.DefaultTheme, defaultTheme)
 	}
 }
 

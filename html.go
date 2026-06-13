@@ -26,6 +26,7 @@ type monitorPageData struct {
 	CSS              template.CSS
 	JS               template.JS
 	ConfigJSON       template.JS
+	DefaultTheme     string
 	Samples30Pressed bool
 	Samples60Pressed bool
 	Samples90Pressed bool
@@ -34,6 +35,7 @@ type monitorPageData struct {
 type monitorClientConfig struct {
 	RefreshMS           int64  `json:"refreshMS"`
 	DefaultLanguage     string `json:"defaultLanguage"`
+	DefaultTheme        string `json:"defaultTheme"`
 	DefaultSampleWindow int    `json:"defaultSampleWindow"`
 }
 
@@ -42,6 +44,7 @@ func renderHTML(cfg Config) string {
 	configJSON, _ := json.Marshal(monitorClientConfig{
 		RefreshMS:           refreshMS,
 		DefaultLanguage:     cfg.DefaultLanguage,
+		DefaultTheme:        cfg.DefaultTheme,
 		DefaultSampleWindow: cfg.DefaultSampleWindow,
 	})
 
@@ -52,6 +55,7 @@ func renderHTML(cfg Config) string {
 		CSS:              template.CSS(monitorStyleCSS),
 		JS:               template.JS(monitorAppJS),
 		ConfigJSON:       template.JS(configJSON),
+		DefaultTheme:     cfg.DefaultTheme,
 		Samples30Pressed: cfg.DefaultSampleWindow == 30,
 		Samples60Pressed: cfg.DefaultSampleWindow == 60,
 		Samples90Pressed: cfg.DefaultSampleWindow == 90,

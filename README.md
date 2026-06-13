@@ -1,5 +1,3 @@
-# monitor
-
 <p align="center">
   <img src="https://img.shields.io/badge/License-MIT-6C757D?style=flat&color=3B82F6" alt="License">&nbsp&nbsp&nbsp
   <img src="https://img.shields.io/badge/Go-1.24%2B-00ADD8?style=flat&logo=go&logoColor=white" alt="Go Version">&nbsp&nbsp&nbsp
@@ -11,6 +9,11 @@
   </a>&nbsp&nbsp&nbsp
 </p>
 
+<p align="left">
+  English | 
+  <a href="docs/zh/README.md">中文</a>
+</p>
+
 A tiny `net/http` middleware for real-time Go service status.
 
 `monitor` is intentionally small: one middleware, one page, one JSON snapshot.
@@ -19,13 +22,13 @@ The status page is fully embedded and requires no frontend build step or externa
 
 It includes:
 
-- light / dark / auto theme
+- light / dark theme
 - English and Simplified Chinese UI
 - LIVE / STALE / ERROR status
 - small in-browser trend charts powered by native Canvas
 - JSON snapshot via `Accept: application/json`
 
-Charts keep only short in-browser history. Metrics are not stored server-side.
+Charts keep only short in-browser history. Metrics are not stored server-side. Restarting the process clears in-memory counters and chart history.
 
 ## Installation
 
@@ -67,6 +70,40 @@ Fetch JSON:
 curl -H "Accept: application/json" http://localhost:8080/monitor
 ```
 
+## Fiber
+
+`monitor` is built on `net/http`. Fiber is based on `fasthttp`, but Fiber's official adaptor middleware can wrap `net/http` middleware:
+
+```go
+package main
+
+import (
+	"net/http"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
+	"github.com/gofurry/monitor"
+)
+
+func main() {
+	app := fiber.New()
+
+	app.Use(adaptor.HTTPMiddleware(func(next http.Handler) http.Handler {
+		return monitor.New(next, monitor.Config{
+			Path: "/monitor",
+		})
+	}))
+
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.SendString("hello")
+	})
+
+	_ = app.Listen(":8080")
+}
+```
+
+Open `http://localhost:8080/monitor`.
+
 ## Configuration
 
 ```go
@@ -76,6 +113,7 @@ handler := monitor.New(mux, monitor.Config{
 	Description:         "Live production service metrics.",
 	Footer:              "Copyright 2026 Example Inc.",
 	DefaultLanguage:     "en",
+	DefaultTheme:        "dark",
 	DefaultSampleWindow: 60,
 	DiskPaths:           nil,
 	Refresh:             2 * time.Second,
@@ -95,6 +133,7 @@ Defaults:
 | `Description` | `Live process, runtime, system, and HTTP metrics for this Go service.` | Short visible description below the header. |
 | `Footer` | `Powered by github.com/gofurry/monitor - MIT License.` | Footer text for copyright, ownership, or license notes. |
 | `DefaultLanguage` | `en` | Initial UI language when no browser preference is saved. Supported values: `en`, `zh-CN`. |
+| `DefaultTheme` | `dark` | Initial UI theme when no browser preference is saved. Supported values: `light`, `dark`. |
 | `DefaultSampleWindow` | `60` | Initial trend chart sample count. Supported values: `30`, `60`, `90`. |
 | `DiskPaths` | `nil` | Filesystem paths to sample for disk usage. Empty uses the current working directory's filesystem. |
 | `Refresh` | `2s` | Background metrics collection interval. |
@@ -102,6 +141,21 @@ Defaults:
 | `IgnoreRequest` | `nil` | Exclude selected requests from `http.total_requests`. |
 
 Requests to `Path` are always excluded from `http.total_requests`; the monitor page and its JSON polling do not inflate the business request count. `IgnoreRequest` is for other non-business traffic, such as load balancer probes or health checks. Ignored requests are still served by your handler.
+
+## Best Practice
+
+`monitor` does not persist metrics, logs, traces, or chart history. It shows the current process, current host, Go runtime, and requests handled by this middleware instance.
+
+It is best suited for single-node monolithic Go services where you want a very lightweight built-in status page for local service health and basic runtime visibility.
+
+Use a dedicated observability stack such as Prometheus, Grafana, tracing, and centralized logs when you need:
+
+- long-term history
+- alerts
+- multi-instance aggregation
+- distributed tracing
+- business metrics
+- cluster-wide dashboards
 
 ## Scope
 
@@ -115,7 +169,7 @@ Requests to `Path` are always excluded from `http.total_requests`; the monitor p
 - count total business requests
 - track in-flight business requests, HTTP status code classes, and recent request latency
 - render short in-browser trend charts without external chart libraries
-- support light / dark / auto theme
+- support light / dark theme
 - support English and Simplified Chinese UI
 
 `monitor` does not:
@@ -243,3 +297,8 @@ The benchmark suite covers:
 - Metrics are collected in a background ticker and served from the latest race-safe snapshot.
 - Partial metric collection failures leave the affected values at zero instead of making the monitor endpoint fail.
 - The HTML page has no external frontend dependencies; its template, CSS, and JavaScript are embedded from `internal/ui`.
+
+## Related Documents
+
+- [Contributing](CONTRIBUTING.md) / [贡献指南](docs/zh/CONTRIBUTING.md)
+- [Security Policy](SECURITY.md) / [安全政策](docs/zh/SECURITY.md)
