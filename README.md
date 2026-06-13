@@ -3,12 +3,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/License-MIT-6C757D?style=flat&color=3B82F6" alt="License">&nbsp&nbsp&nbsp
   <img src="https://img.shields.io/badge/Go-1.24%2B-00ADD8?style=flat&logo=go&logoColor=white" alt="Go Version">&nbsp&nbsp&nbsp
-  <a href="https://github.com/gofurry/monitor/actions/workflows/ci.yml">
-    <img src="https://github.com/gofurry/monitor/actions/workflows/ci.yml/badge.svg" alt="CI">
-  </a>&nbsp&nbsp&nbsp
-  <a href="https://goreportcard.com/report/github.com/gofurry/monitor">
-    <img src="https://goreportcard.com/badge/github.com/gofurry/monitor" alt="Go Report Card">
-  </a>&nbsp&nbsp&nbsp
+  <a href="https://github.com/gofurry/monitor/actions/workflows/ci.yml"><img src="https://github.com/gofurry/monitor/actions/workflows/ci.yml/badge.svg" alt="CI"></a>&nbsp&nbsp&nbsp
+  <a href="https://goreportcard.com/report/github.com/gofurry/monitor"><img src="https://goreportcard.com/badge/github.com/gofurry/monitor" alt="Go Report Card"></a>&nbsp&nbsp&nbsp
 </p>
 
 <p align="left">
