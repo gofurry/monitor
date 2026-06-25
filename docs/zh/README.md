@@ -72,7 +72,10 @@ curl -H "Accept: application/json" http://localhost:8080/monitor
 
 ## Fiber
 
-`monitor` 基于 `net/http`。Fiber 基于 `fasthttp`，但 Fiber 官方 adaptor 中间件可以包装 `net/http` 中间件：
+`monitor` 基于 `net/http`。Fiber 基于 `fasthttp`，因此当前最安全的接入方式是在服务启动阶段只创建一个 monitor 实例，然后通过 Fiber 官方 adaptor 只暴露监控端点。
+
+> 重要：不要在 `adaptor.HTTPMiddleware` 内部调用 `monitor.New` 或 `monitor.NewMonitor`。
+> Fiber 会在每个请求里执行这个中间件工厂函数，而每个 monitor 实例都会启动一个后台采集 goroutine。如果每个请求都创建 monitor 实例，就会泄漏采集 goroutine。
 
 ```go
 package main
@@ -88,11 +91,12 @@ import (
 func main() {
 	app := fiber.New()
 
-	app.Use(adaptor.HTTPMiddleware(func(next http.Handler) http.Handler {
-		return monitor.New(next, monitor.Config{
-			Path: "/monitor",
-		})
-	}))
+	m := monitor.NewMonitor(http.NotFoundHandler(), monitor.Config{
+		Path: "/monitor",
+	})
+	defer m.Stop()
+
+	app.All("/monitor", adaptor.HTTPHandler(m))
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("hello")
@@ -103,6 +107,8 @@ func main() {
 ```
 
 打开 `http://localhost:8080/monitor`。
+
+这个 Fiber 示例可以安全地提供监控页面和 JSON 快照，但它不会包裹所有 Fiber 路由。因此 `http.total_requests` 只会反映这个 monitor handler 处理到的请求。如果你需要完整统计 Fiber 业务请求，请使用原生 Fiber adapter，而不是用 `adaptor.HTTPMiddleware` 包装 `monitor.New`。
 
 ## 配置
 
