@@ -75,7 +75,10 @@ curl -H "Accept: application/json" http://localhost:8080/monitor
 
 ## Fiber
 
-`monitor` is built on `net/http`. Fiber is based on `fasthttp`, but Fiber's official adaptor middleware can wrap `net/http` middleware:
+`monitor` is built on `net/http`. Fiber is based on `fasthttp`, so the safest integration today is to create one monitor instance during startup and expose only the monitor endpoint through Fiber's official adaptor.
+
+> Important: do not call `monitor.New` or `monitor.NewMonitor` inside `adaptor.HTTPMiddleware`.
+> Fiber executes that middleware factory for every request, while each monitor instance starts one background collector goroutine. Creating a monitor instance per request will leak collector goroutines.
 
 ```go
 package main
@@ -91,11 +94,12 @@ import (
 func main() {
 	app := fiber.New()
 
-	app.Use(adaptor.HTTPMiddleware(func(next http.Handler) http.Handler {
-		return monitor.New(next, monitor.Config{
-			Path: "/monitor",
-		})
-	}))
+	m := monitor.NewMonitor(http.NotFoundHandler(), monitor.Config{
+		Path: "/monitor",
+	})
+	defer m.Stop()
+
+	app.All("/monitor", adaptor.HTTPHandler(m))
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("hello")
@@ -106,6 +110,8 @@ func main() {
 ```
 
 Open `http://localhost:8080/monitor`.
+
+This Fiber example safely serves the monitor page and JSON snapshot, but it does not wrap all Fiber routes. Therefore `http.total_requests` only reflects requests handled by this monitor handler. If you need full Fiber business request accounting, use a native Fiber adapter instead of wrapping `monitor.New` with `adaptor.HTTPMiddleware`.
 
 ## Configuration
 
