@@ -72,7 +72,7 @@ curl -H "Accept: application/json" http://localhost:8080/monitor
 
 ## Fiber
 
-`monitor` 基于 `net/http`。Fiber 基于 `fasthttp`，因此当前最安全的接入方式是在服务启动阶段只创建一个 monitor 实例，然后通过 Fiber 官方 adaptor 只暴露监控端点。
+`monitor` 基于 `net/http`。Fiber 基于 `fasthttp`，因此推荐在服务启动阶段只创建一个 monitor 实例，通过 Fiber 官方 adaptor 只暴露监控端点，再用 Fiber 原生中间件记录业务请求。
 
 > 重要：不要在 `adaptor.HTTPMiddleware` 内部调用 `monitor.New` 或 `monitor.NewMonitor`。
 > Fiber 会在每个请求里执行这个中间件工厂函数，而每个 monitor 实例都会启动一个后台采集 goroutine。如果每个请求都创建 monitor 实例，就会泄漏采集 goroutine。
@@ -82,9 +82,10 @@ package main
 
 import (
 	"net/http"
+	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/adaptor"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/gofurry/monitor"
 )
 
@@ -96,9 +97,29 @@ func main() {
 	})
 	defer m.Stop()
 
+	app.Use(func(c fiber.Ctx) error {
+		if c.Path() == "/monitor" {
+			return c.Next()
+		}
+
+		started := time.Now()
+		m.RequestStarted()
+		err := c.Next()
+
+		status := c.Response().StatusCode()
+		if err != nil {
+			status = fiber.StatusInternalServerError
+			if fiberErr, ok := err.(*fiber.Error); ok {
+				status = fiberErr.Code
+			}
+		}
+		m.RequestFinished(status, time.Since(started))
+		return err
+	})
+
 	app.All("/monitor", adaptor.HTTPHandler(m))
 
-	app.Get("/", func(c *fiber.Ctx) error {
+	app.Get("/", func(c fiber.Ctx) error {
 		return c.SendString("hello")
 	})
 
@@ -108,7 +129,114 @@ func main() {
 
 打开 `http://localhost:8080/monitor`。
 
-这个 Fiber 示例可以安全地提供监控页面和 JSON 快照，但它不会包裹所有 Fiber 路由。因此 `http.total_requests` 只会反映这个 monitor handler 处理到的请求。如果你需要完整统计 Fiber 业务请求，请使用原生 Fiber adapter，而不是用 `adaptor.HTTPMiddleware` 包装 `monitor.New`。
+这个 Fiber 示例可以安全地提供监控页面和 JSON 快照，同时通过原生 Fiber 中间件记录 `http.total_requests`、处理中请求、状态码分类和请求延迟。
+
+## Gin
+
+Gin 运行在 `net/http` 之上，但如果你希望 monitor 不直接包裹 Gin handler，也可以使用框架无关的请求生命周期方法。
+
+```go
+package main
+
+import (
+	"net/http"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gofurry/monitor"
+)
+
+func main() {
+	r := gin.New()
+	r.Use(gin.Recovery())
+
+	m := monitor.NewMonitor(http.NotFoundHandler(), monitor.Config{
+		Path: "/monitor",
+	})
+	defer m.Stop()
+
+	r.Use(func(c *gin.Context) {
+		if c.Request.URL.Path == "/monitor" {
+			c.Next()
+			return
+		}
+
+		started := time.Now()
+		m.RequestStarted()
+		c.Next()
+
+		status := c.Writer.Status()
+		if status == 0 {
+			status = http.StatusOK
+		}
+		m.RequestFinished(status, time.Since(started))
+	})
+
+	r.GET("/monitor", gin.WrapH(m))
+	r.GET("/", func(c *gin.Context) {
+		c.String(http.StatusOK, "hello")
+	})
+
+	_ = r.Run(":8080")
+}
+```
+
+## Echo
+
+Echo 也可以用同一组 monitor 生命周期方法记录请求。
+
+```go
+package main
+
+import (
+	"net/http"
+	"time"
+
+	"github.com/gofurry/monitor"
+	"github.com/labstack/echo/v4"
+)
+
+func main() {
+	e := echo.New()
+
+	m := monitor.NewMonitor(http.NotFoundHandler(), monitor.Config{
+		Path: "/monitor",
+	})
+	defer m.Stop()
+
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if c.Request().URL.Path == "/monitor" {
+				return next(c)
+			}
+
+			started := time.Now()
+			m.RequestStarted()
+			err := next(c)
+
+			status := c.Response().Status
+			if err != nil {
+				status = http.StatusInternalServerError
+				if echoErr, ok := err.(*echo.HTTPError); ok {
+					status = echoErr.Code
+				}
+			}
+			if status == 0 {
+				status = http.StatusOK
+			}
+			m.RequestFinished(status, time.Since(started))
+			return err
+		}
+	})
+
+	e.GET("/monitor", echo.WrapHandler(m))
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "hello")
+	})
+
+	_ = e.Start(":8080")
+}
+```
 
 ## 配置
 

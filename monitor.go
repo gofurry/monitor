@@ -103,6 +103,43 @@ func (m *Monitor) Current() Stats {
 	return stats
 }
 
+// RequestStarted records that a business request has entered a framework
+// middleware or handler chain.
+//
+// Use it with RequestFinished when integrating monitor with frameworks that do
+// not use net/http, such as Fiber, Gin, or Echo. Each call must be paired with
+// exactly one RequestFinished call.
+func (m *Monitor) RequestStarted() {
+	if m == nil {
+		return
+	}
+	m.requests.Add(1)
+	m.inFlight.Add(1)
+}
+
+// RequestFinished records the status code and duration for a business request
+// that was previously recorded with RequestStarted.
+func (m *Monitor) RequestFinished(status int, duration time.Duration) {
+	if m == nil {
+		return
+	}
+	m.inFlight.Add(^uint64(0))
+	m.recordBusinessRequest(status, duration)
+}
+
+// ObserveRequest records one completed business request without changing the
+// in-flight request counter.
+//
+// It is useful for framework adapters or tests that only observe completed
+// requests and do not need in-flight tracking.
+func (m *Monitor) ObserveRequest(status int, duration time.Duration) {
+	if m == nil {
+		return
+	}
+	m.requests.Add(1)
+	m.recordBusinessRequest(status, duration)
+}
+
 // Stop stops the background collector. It is safe to call Stop more than once.
 func (m *Monitor) Stop() {
 	m.stopOnce.Do(func() {
@@ -147,13 +184,11 @@ func (m *Monitor) ignoreRequest(r *http.Request) bool {
 }
 
 func (m *Monitor) serveBusiness(w http.ResponseWriter, r *http.Request) {
-	m.requests.Add(1)
-	m.inFlight.Add(1)
+	m.RequestStarted()
 	started := time.Now()
 	rw := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 	defer func() {
-		m.inFlight.Add(^uint64(0))
-		m.recordBusinessRequest(rw.status, time.Since(started))
+		m.RequestFinished(rw.status, time.Since(started))
 	}()
 
 	m.next.ServeHTTP(rw, r)
