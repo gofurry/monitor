@@ -75,7 +75,7 @@ curl -H "Accept: application/json" http://localhost:8080/monitor
 
 ## Fiber
 
-`monitor` is built on `net/http`. Fiber is based on `fasthttp`, so the safest integration today is to create one monitor instance during startup and expose only the monitor endpoint through Fiber's official adaptor.
+`monitor` is built on `net/http`. Fiber is based on `fasthttp`, so create one monitor instance during startup, expose only the monitor endpoint through Fiber's official adaptor, and record business requests with Fiber-native middleware.
 
 > Important: do not call `monitor.New` or `monitor.NewMonitor` inside `adaptor.HTTPMiddleware`.
 > Fiber executes that middleware factory for every request, while each monitor instance starts one background collector goroutine. Creating a monitor instance per request will leak collector goroutines.
@@ -85,9 +85,10 @@ package main
 
 import (
 	"net/http"
+	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/adaptor"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/gofurry/monitor"
 )
 
@@ -99,9 +100,29 @@ func main() {
 	})
 	defer m.Stop()
 
+	app.Use(func(c fiber.Ctx) error {
+		if c.Path() == "/monitor" {
+			return c.Next()
+		}
+
+		started := time.Now()
+		m.RequestStarted()
+		err := c.Next()
+
+		status := c.Response().StatusCode()
+		if err != nil {
+			status = fiber.StatusInternalServerError
+			if fiberErr, ok := err.(*fiber.Error); ok {
+				status = fiberErr.Code
+			}
+		}
+		m.RequestFinished(status, time.Since(started))
+		return err
+	})
+
 	app.All("/monitor", adaptor.HTTPHandler(m))
 
-	app.Get("/", func(c *fiber.Ctx) error {
+	app.Get("/", func(c fiber.Ctx) error {
 		return c.SendString("hello")
 	})
 
@@ -111,7 +132,114 @@ func main() {
 
 Open `http://localhost:8080/monitor`.
 
-This Fiber example safely serves the monitor page and JSON snapshot, but it does not wrap all Fiber routes. Therefore `http.total_requests` only reflects requests handled by this monitor handler. If you need full Fiber business request accounting, use a native Fiber adapter instead of wrapping `monitor.New` with `adaptor.HTTPMiddleware`.
+This Fiber example safely serves the monitor page and JSON snapshot, while `http.total_requests`, in-flight requests, status code classes, and latency are recorded from the native Fiber middleware.
+
+## Gin
+
+Gin runs on `net/http`, but you can still use the framework-neutral request lifecycle methods when you want monitor to stay outside Gin's handler chain.
+
+```go
+package main
+
+import (
+	"net/http"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gofurry/monitor"
+)
+
+func main() {
+	r := gin.New()
+	r.Use(gin.Recovery())
+
+	m := monitor.NewMonitor(http.NotFoundHandler(), monitor.Config{
+		Path: "/monitor",
+	})
+	defer m.Stop()
+
+	r.Use(func(c *gin.Context) {
+		if c.Request.URL.Path == "/monitor" {
+			c.Next()
+			return
+		}
+
+		started := time.Now()
+		m.RequestStarted()
+		c.Next()
+
+		status := c.Writer.Status()
+		if status == 0 {
+			status = http.StatusOK
+		}
+		m.RequestFinished(status, time.Since(started))
+	})
+
+	r.GET("/monitor", gin.WrapH(m))
+	r.GET("/", func(c *gin.Context) {
+		c.String(http.StatusOK, "hello")
+	})
+
+	_ = r.Run(":8080")
+}
+```
+
+## Echo
+
+Echo can also record requests with the same monitor lifecycle methods.
+
+```go
+package main
+
+import (
+	"net/http"
+	"time"
+
+	"github.com/gofurry/monitor"
+	"github.com/labstack/echo/v4"
+)
+
+func main() {
+	e := echo.New()
+
+	m := monitor.NewMonitor(http.NotFoundHandler(), monitor.Config{
+		Path: "/monitor",
+	})
+	defer m.Stop()
+
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if c.Request().URL.Path == "/monitor" {
+				return next(c)
+			}
+
+			started := time.Now()
+			m.RequestStarted()
+			err := next(c)
+
+			status := c.Response().Status
+			if err != nil {
+				status = http.StatusInternalServerError
+				if echoErr, ok := err.(*echo.HTTPError); ok {
+					status = echoErr.Code
+				}
+			}
+			if status == 0 {
+				status = http.StatusOK
+			}
+			m.RequestFinished(status, time.Since(started))
+			return err
+		}
+	})
+
+	e.GET("/monitor", echo.WrapHandler(m))
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "hello")
+	})
+
+	_ = e.Start(":8080")
+}
+```
 
 ## Configuration
 

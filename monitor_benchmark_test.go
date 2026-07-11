@@ -138,14 +138,26 @@ func BenchmarkMonitorIgnoredRequest(b *testing.B) {
 	benchmarkTotalRequests = calls
 }
 
-func BenchmarkMonitorRecordBusinessRequest(b *testing.B) {
+func BenchmarkMonitorObserveRequest(b *testing.B) {
 	m := NewMonitor(http.NotFoundHandler(), Config{Refresh: time.Hour})
 	defer m.Stop()
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		m.recordBusinessRequest(http.StatusNoContent, time.Microsecond)
+		m.ObserveRequest(http.StatusNoContent, time.Microsecond)
+	}
+}
+
+func BenchmarkMonitorManualRequestLifecycle(b *testing.B) {
+	m := NewMonitor(http.NotFoundHandler(), Config{Refresh: time.Hour})
+	defer m.Stop()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		m.RequestStarted()
+		m.RequestFinished(http.StatusNoContent, time.Microsecond)
 	}
 }
 

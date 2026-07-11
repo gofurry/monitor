@@ -186,6 +186,61 @@ func TestMonitorCollectsHTTPStatusLatencyAndInFlight(t *testing.T) {
 	}
 }
 
+func TestMonitorManualRequestLifecycle(t *testing.T) {
+	m := NewMonitor(http.NotFoundHandler(), Config{Refresh: time.Hour})
+	defer m.Stop()
+
+	m.RequestStarted()
+	m.collectOnce()
+
+	if got := m.Current().HTTP.TotalRequests; got != 1 {
+		t.Fatalf("total requests after start = %d, want 1", got)
+	}
+	if got := m.Current().HTTP.InFlightRequests; got != 1 {
+		t.Fatalf("in-flight requests after start = %d, want 1", got)
+	}
+
+	m.RequestFinished(http.StatusCreated, time.Millisecond)
+	m.collectOnce()
+
+	httpStats := m.Current().HTTP
+	if got := httpStats.InFlightRequests; got != 0 {
+		t.Fatalf("in-flight requests after finish = %d, want 0", got)
+	}
+	if got := httpStats.StatusCodes.Status2xx; got != 1 {
+		t.Fatalf("2xx responses = %d, want 1", got)
+	}
+	if httpStats.Latency.LastNS == 0 {
+		t.Fatalf("last latency = %d, want > 0", httpStats.Latency.LastNS)
+	}
+}
+
+func TestMonitorObserveRequestRecordsCompletedRequest(t *testing.T) {
+	m := NewMonitor(http.NotFoundHandler(), Config{Refresh: time.Hour})
+	defer m.Stop()
+
+	m.ObserveRequest(http.StatusNotFound, time.Millisecond)
+	m.ObserveRequest(http.StatusInternalServerError, 0)
+	m.collectOnce()
+
+	httpStats := m.Current().HTTP
+	if got := httpStats.TotalRequests; got != 2 {
+		t.Fatalf("total requests = %d, want 2", got)
+	}
+	if got := httpStats.InFlightRequests; got != 0 {
+		t.Fatalf("in-flight requests = %d, want 0", got)
+	}
+	if got := httpStats.StatusCodes.Status4xx; got != 1 {
+		t.Fatalf("4xx responses = %d, want 1", got)
+	}
+	if got := httpStats.StatusCodes.Status5xx; got != 1 {
+		t.Fatalf("5xx responses = %d, want 1", got)
+	}
+	if httpStats.Latency.LastNS != uint64(time.Nanosecond) {
+		t.Fatalf("last latency = %d, want %d", httpStats.Latency.LastNS, time.Nanosecond)
+	}
+}
+
 func TestMonitorRecordsMinimumNanosecondLatency(t *testing.T) {
 	m := NewMonitor(http.NotFoundHandler(), Config{Refresh: time.Hour})
 	defer m.Stop()
