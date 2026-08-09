@@ -30,13 +30,12 @@
 1. JSON Snapshot 缺少版本与采集状态信息。
 2. HTTP 指标缺少 RPS、错误率、P50/P95/P99 等生产环境常用指标。
 3. 生命周期最大延迟 `max_ns` 长时间运行后参考价值不足。
-4. Monitor 页面缺少服务版本、构建信息、运行环境等上下文。
-5. 容器环境下 Host 指标可能不能真实反映进程资源限制。
-6. Monitor 页面暴露生产运行信息，但目前缺少内建访问控制挂钩。
-7. `Refresh` 可被错误配置为极小值，造成过度采集。
-8. 手工 Request 生命周期 API 存在 in-flight 下溢风险。
-9. CI 仍可补充 race、Windows 与多 Go 版本验证。
-10. JSON / UI 对“指标值为 0”和“采集失败”缺少区分。
+4. 容器环境下 Host 指标可能不能真实反映进程资源限制。
+5. Monitor 页面暴露生产运行信息，但目前缺少内建访问控制挂钩。
+6. `Refresh` 可被错误配置为极小值，造成过度采集。
+7. 手工 Request 生命周期 API 存在 in-flight 下溢风险。
+8. CI 仍可补充 race、Windows 与多 Go 版本验证。
+9. JSON / UI 对“指标值为 0”和“采集失败”缺少区分。
 
 ---
 
@@ -156,11 +155,11 @@ type Stats struct {
     CollectedAt   time.Time      `json:"collected_at"`
     Collection    CollectionStats `json:"collection"`
 
-    Service ServiceStats `json:"service"`
-    PID     PIDStats     `json:"pid"`
-    Runtime RuntimeStats `json:"runtime"`
-    OS      OSStats      `json:"os"`
-    HTTP    HTTPStats    `json:"http"`
+    PID       PIDStats       `json:"pid"`
+    Runtime   RuntimeStats   `json:"runtime"`
+    OS        OSStats        `json:"os"`
+    Container ContainerStats `json:"container"`
+    HTTP      HTTPStats      `json:"http"`
 }
 ```
 
@@ -587,100 +586,11 @@ MaxNS        = 生命周期最大值
 
 ---
 
-# 9. Service / Build Info
+# 9. Header / Identity Scope
 
-## 9.1 目标
+v1.2 不引入服务身份、部署环境或构建信息配置。Monitor 无法为不同项目统一定义这些字段的业务语义，而且这些信息会扩大公共 API 与数据暴露面。
 
-让用户打开 `/monitor` 后第一眼知道：
-
-```text
-这是哪个服务
-跑的是哪个版本
-是什么环境
-使用什么 Go 版本
-编译版本是什么
-```
-
----
-
-## 9.2 配置
-
-新增：
-
-```go
-type Config struct {
-    // existing...
-
-    ServiceName string
-    Version     string
-    Environment string
-}
-```
-
-推荐默认：
-
-```text
-ServiceName = executable name
-Version     = build info module version / "(devel)"
-Environment = ""
-```
-
----
-
-## 9.3 自动采集
-
-可以通过：
-
-```go
-runtime.Version()
-debug.ReadBuildInfo()
-os.Executable()
-```
-
-获得：
-
-```text
-Go Version
-Module
-Module Version
-VCS Revision
-VCS Time
-VCS Modified
-Executable
-```
-
----
-
-## 9.4 数据结构
-
-```go
-type ServiceStats struct {
-    Name        string `json:"name,omitempty"`
-    Version     string `json:"version,omitempty"`
-    Environment string `json:"environment,omitempty"`
-
-    GoVersion   string `json:"go_version"`
-    Module      string `json:"module,omitempty"`
-    Revision    string `json:"revision,omitempty"`
-    VCSModified bool   `json:"vcs_modified,omitempty"`
-}
-```
-
----
-
-## 9.5 隐私原则
-
-默认不要暴露：
-
-- 完整 executable filesystem path
-- GOPATH
-- 工作目录
-- Build Host
-- 用户名
-- 环境变量
-- Git Remote URL
-
-UI/JSON 仅保留必要构建标识。
+界面左上方只展示用户配置的 `Title`。JSON 不包含 service、environment、Go build info、可执行文件路径、工作目录或环境变量。
 
 ---
 
@@ -1313,9 +1223,6 @@ IgnoreRequest
 新增：
 
 ```text
-ServiceName
-Version
-Environment
 Authorize
 ```
 
@@ -1674,9 +1581,6 @@ runtime usage
 resource usage
 disk mount information
 request traffic
-service version
-revision
-environment name
 ```
 
 推荐用户：
@@ -1746,18 +1650,13 @@ Snapshot 模型稳定
 
 ---
 
-## Phase 3：Service Info
+## Phase 3：Header Scope
 
 任务：
 
-- [ ] Config.ServiceName
-- [ ] Config.Version
-- [ ] Config.Environment
-- [ ] `runtime.Version`
-- [ ] `debug.ReadBuildInfo`
-- [ ] VCS revision
-- [ ] UI header/service section
-- [ ] README example
+- [ ] 左上方只展示 `Title`
+- [ ] 不增加 service identity 配置
+- [ ] 不采集或暴露 Go build info
 
 ---
 
@@ -1888,7 +1787,6 @@ v1.2 improves production visibility while keeping monitor lightweight and depend
 - Recent HTTP 4xx / 5xx / error rates.
 - Approximate P50 / P95 / P99 request latency.
 - Recent maximum request latency.
-- Service and Go build information.
 - Optional request authorization hook for the monitor endpoint.
 - Linux cgroup v2 container memory and CPU limit metrics.
 - Network receive / transmit metrics.
@@ -1897,7 +1795,7 @@ v1.2 improves production visibility while keeping monitor lightweight and depend
 ### Improved
 
 - Monitor UI now distinguishes unavailable metrics from real zero values.
-- Added production-oriented service and HTTP summary information.
+- Added production-oriented HTTP summary information.
 - Refresh intervals are clamped to a safe minimum.
 - Improved CI coverage with race and cross-platform testing.
 
@@ -2029,8 +1927,6 @@ optional collectors
 v1.2 最重要的成果不是“增加多少个指标”，而是让用户打开 `/monitor` 后，可以在几秒钟内回答：
 
 ```text
-这个服务是谁？
-运行的是哪个版本？
 服务活着多久了？
 当前请求压力多大？
 错误率有没有异常？
