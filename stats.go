@@ -6,13 +6,12 @@ import "time"
 // version of monitor.
 const StatsSchemaVersion = 1
 
-// Stats is a point-in-time JSON snapshot of service, process, runtime, system,
+// Stats is a point-in-time JSON snapshot of process, runtime, system,
 // container, and HTTP metrics.
 type Stats struct {
 	SchemaVersion int             `json:"schema_version"`
 	CollectedAt   time.Time       `json:"collected_at"`
 	Collection    CollectionStats `json:"collection"`
-	Service       ServiceStats    `json:"service"`
 	PID           PIDStats        `json:"pid"`
 	Runtime       RuntimeStats    `json:"runtime"`
 	OS            OSStats         `json:"os"`
@@ -25,17 +24,6 @@ type CollectionStats struct {
 	DurationNS uint64   `json:"duration_ns"`
 	Partial    bool     `json:"partial"`
 	Errors     []string `json:"errors,omitempty"`
-}
-
-// ServiceStats describes the running service and its Go build metadata.
-type ServiceStats struct {
-	Name        string `json:"name,omitempty"`
-	Version     string `json:"version,omitempty"`
-	Environment string `json:"environment,omitempty"`
-	GoVersion   string `json:"go_version"`
-	Module      string `json:"module,omitempty"`
-	Revision    string `json:"revision,omitempty"`
-	VCSModified bool   `json:"vcs_modified,omitempty"`
 }
 
 // PIDStats describes the current process.

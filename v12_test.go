@@ -227,29 +227,6 @@ func TestRefreshIsClamped(t *testing.T) {
 	}
 }
 
-func TestServiceStatsOverridesAndPrivacy(t *testing.T) {
-	stats := collectServiceStats(Config{
-		ServiceName: "example-api",
-		Version:     "v1.2.0",
-		Environment: "production",
-	})
-	if stats.Name != "example-api" || stats.Version != "v1.2.0" || stats.Environment != "production" {
-		t.Fatalf("service stats = %+v", stats)
-	}
-	if stats.GoVersion == "" {
-		t.Fatal("Go version is empty")
-	}
-	data, err := json.Marshal(stats)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, forbidden := range []string{"executable", "working_directory", "gopath", "remote_url"} {
-		if strings.Contains(strings.ToLower(string(data)), forbidden) {
-			t.Fatalf("service JSON contains private field %q: %s", forbidden, data)
-		}
-	}
-}
-
 func TestCgroupV2Collection(t *testing.T) {
 	root := t.TempDir()
 	writeTestFile(t, root, "memory.current", "536870912\n")

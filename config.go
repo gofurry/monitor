@@ -45,16 +45,6 @@ type Config struct {
 	// the built-in favicon.
 	FaviconURL string
 
-	// ServiceName identifies the service in the dashboard and JSON snapshot.
-	// Empty uses the executable name.
-	ServiceName string
-
-	// Version identifies the running service version. Empty uses Go build info.
-	Version string
-
-	// Environment describes the deployment environment, such as "production".
-	Environment string
-
 	// DefaultLanguage controls the initial HTML UI language when the browser has
 	// no saved monitor language preference. Supported values are "en" and
 	// "zh-CN". Empty or unsupported values use "en".
