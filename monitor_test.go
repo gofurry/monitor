@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"encoding/json"
+	"html"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -366,6 +367,50 @@ func TestMonitorHTMLEscapesConfiguredContent(t *testing.T) {
 	}
 }
 
+func TestMonitorHTMLFavicon(t *testing.T) {
+	tests := []struct {
+		name       string
+		faviconURL string
+		want       string
+	}{
+		{
+			name: "built-in default",
+			want: `rel="icon" href="data:image/svg+xml;base64,`,
+		},
+		{
+			name:       "root-relative URL",
+			faviconURL: "/assets/favicon.svg",
+			want:       `rel="icon" href="/assets/favicon.svg"`,
+		},
+		{
+			name:       "HTTPS URL",
+			faviconURL: "https://cdn.example.com/favicon.ico",
+			want:       `rel="icon" href="https://cdn.example.com/favicon.ico"`,
+		},
+		{
+			name:       "invalid URL falls back to built-in favicon",
+			faviconURL: "javascript:alert(1)",
+			want:       `rel="icon" href="data:image/svg+xml;base64,`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewMonitor(http.NotFoundHandler(), Config{
+				FaviconURL: tt.faviconURL,
+				Refresh:    time.Hour,
+			})
+			defer m.Stop()
+
+			rec := httptest.NewRecorder()
+			m.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/monitor", nil))
+			if body := html.UnescapeString(rec.Body.String()); !strings.Contains(body, tt.want) {
+				t.Fatalf("HTML body does not contain %q", tt.want)
+			}
+		})
+	}
+}
+
 func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 	m := NewMonitor(http.NotFoundHandler(), Config{Refresh: time.Hour})
 	defer m.Stop()
@@ -629,6 +674,26 @@ func TestConfigDefaultsAndPathNormalization(t *testing.T) {
 	}
 	if len(cfg.DiskPaths) != 0 {
 		t.Fatalf("disk paths = %v, want empty", cfg.DiskPaths)
+	}
+}
+
+func TestConfigNormalizesFaviconURL(t *testing.T) {
+	valid := applyConfig([]Config{{FaviconURL: " /assets/favicon.svg "}})
+	if valid.FaviconURL != "/assets/favicon.svg" {
+		t.Fatalf("favicon URL = %q, want /assets/favicon.svg", valid.FaviconURL)
+	}
+
+	for _, faviconURL := range []string{
+		"./favicon.ico",
+		"//cdn.example.com/favicon.ico",
+		"data:image/svg+xml;base64,PHN2Zz4=",
+		"javascript:alert(1)",
+		"https://user@example.com/favicon.ico",
+	} {
+		cfg := applyConfig([]Config{{FaviconURL: faviconURL}})
+		if cfg.FaviconURL != "" {
+			t.Errorf("favicon URL %q = %q, want empty", faviconURL, cfg.FaviconURL)
+		}
 	}
 }
 

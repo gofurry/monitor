@@ -2,6 +2,8 @@ package monitor
 
 import (
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -36,6 +38,11 @@ type Config struct {
 	// Footer is shown at the bottom of the HTML page. It is intended for
 	// copyright, ownership, or license text.
 	Footer string
+
+	// FaviconURL overrides the built-in dashboard favicon. It supports a
+	// root-relative path or an absolute HTTP(S) URL. Empty or invalid values use
+	// the built-in favicon.
+	FaviconURL string
 
 	// DefaultLanguage controls the initial HTML UI language when the browser has
 	// no saved monitor language preference. Supported values are "en" and
@@ -109,6 +116,7 @@ func applyConfig(configs []Config) Config {
 	if cfg.Footer == "" {
 		cfg.Footer = defaultFooter
 	}
+	cfg.FaviconURL = normalizeFaviconURL(cfg.FaviconURL)
 	if !isSupportedLanguage(cfg.DefaultLanguage) {
 		cfg.DefaultLanguage = defaultLanguage
 	}
@@ -128,6 +136,25 @@ func applyConfig(configs []Config) Config {
 		cfg.Refresh = defaultRefresh
 	}
 	return cfg
+}
+
+func normalizeFaviconURL(rawURL string) string {
+	rawURL = strings.TrimSpace(rawURL)
+	if rawURL == "" {
+		return ""
+	}
+
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+	if strings.HasPrefix(rawURL, "/") && !strings.HasPrefix(rawURL, "//") && !strings.HasPrefix(rawURL, "/\\") && parsed.Scheme == "" && parsed.Host == "" {
+		return rawURL
+	}
+	if (strings.EqualFold(parsed.Scheme, "http") || strings.EqualFold(parsed.Scheme, "https")) && parsed.Host != "" && parsed.User == nil {
+		return rawURL
+	}
+	return ""
 }
 
 func isSupportedLanguage(lang string) bool {
