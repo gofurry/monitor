@@ -30,3 +30,16 @@
 - 监控端点中的不安全 HTTP 行为
 - 可能影响被包装服务的请求处理 bug
 - 对本包有实际影响的依赖漏洞
+
+## 仪表盘暴露风险
+
+监控端点会暴露服务标识、构建元数据、进程、runtime、主机、网络、容器和 HTTP 流量统计。请将它视为运维端点，而不是公开应用页面。
+
+- 生产环境使用 `Config.Authorize` 或上游认证代理。
+- 在可行时通过网络层限制访问，并且只通过 TLS 提供端点。
+- 不要把 Bearer token 或其他凭据写入源码、URL 或日志。
+- 优先使用同源 `FaviconURL`；远程 favicon 会向其他主机暴露仪表盘访问行为。
+
+`Authorize` 只作用于配置的监控路径，并在 HTTP 方法处理之前执行。被拒绝的 HTML、JSON、`HEAD` 和不支持的方法请求都会返回 `401 Unauthorized`。本包不提供 TLS、token 存储、限流或角色管理。
+
+JSON 构建元数据仅包含 Go 版本、module、module version、VCS revision 和 modified 状态，刻意排除可执行文件完整路径、工作目录、环境变量和远程仓库 URL。采集失败只暴露稳定标识，不返回底层操作系统错误文本。

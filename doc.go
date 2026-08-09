@@ -6,8 +6,8 @@
 // snapshot. Requests to the monitor path are excluded from the HTTP request
 // count so page refreshes and JSON polling do not inflate business traffic.
 // Frameworks that do not run on net/http can expose the monitor endpoint with
-// their own adaptor and record requests through RequestStarted,
-// RequestFinished, or ObserveRequest.
+// their own adaptor and record requests through BeginRequest, the lower-level
+// RequestStarted and RequestFinished pair, or ObserveRequest.
 //
 // Basic usage:
 //
