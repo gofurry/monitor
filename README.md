@@ -249,6 +249,7 @@ handler := monitor.New(mux, monitor.Config{
 	Title:               "My App Monitor",
 	Description:         "Live production service metrics.",
 	Footer:              "Copyright 2026 Example Inc.",
+	FaviconURL:          "/assets/favicon.svg",
 	DefaultLanguage:     "en",
 	DefaultTheme:        "dark",
 	Background:          "solid",
@@ -270,6 +271,7 @@ Defaults:
 | `Title` | `Monitor` | HTML page title and heading. |
 | `Description` | `Live process, runtime, system, and HTTP metrics for this Go service.` | Short visible description below the header. |
 | `Footer` | `Powered by github.com/gofurry/monitor - MIT License.` | Footer text for copyright, ownership, or license notes. |
+| `FaviconURL` | built-in favicon | Overrides the dashboard favicon with a root-relative path or absolute HTTP(S) URL. Empty or invalid values use the built-in favicon. |
 | `DefaultLanguage` | `en` | Initial UI language when no browser preference is saved. Supported values: `en`, `zh-CN`. |
 | `DefaultTheme` | `dark` | Initial UI theme when no browser preference is saved. Supported values: `light`, `dark`. |
 | `Background` | `solid` | HTML page background. Supported values: `solid`, `grid`. |
@@ -280,6 +282,18 @@ Defaults:
 | `IgnoreRequest` | `nil` | Exclude selected requests from `http.total_requests`. |
 
 Requests to `Path` are always excluded from `http.total_requests`; the monitor page and its JSON polling do not inflate the business request count. `IgnoreRequest` is for other non-business traffic, such as load balancer probes or health checks. Ignored requests are still served by your handler.
+
+### Dashboard favicon
+
+The dashboard includes an embedded favicon by default. Set `FaviconURL` to use a favicon served by your application or a remote HTTP(S) URL:
+
+```go
+handler := monitor.New(mux, monitor.Config{
+	FaviconURL: "/assets/favicon.svg",
+})
+```
+
+Filesystem paths such as `./favicon.ico` are not supported directly. Serve the file through your application first, then configure its URL. A same-origin URL is preferred because a remote favicon causes every dashboard visitor's browser to contact that host.
 
 ## Best Practice
 

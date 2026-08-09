@@ -3,10 +3,18 @@ package monitor
 import (
 	"bytes"
 	_ "embed"
+	"encoding/base64"
 	"encoding/json"
 	"html/template"
 	"time"
 )
+
+const defaultMonitorFaviconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<rect width="64" height="64" rx="14" fill="#0f172a"/>
+<path d="M8 34h13l6-17 11 32 7-20 4 5h7" fill="none" stroke="#67e8f9" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`
+
+var defaultMonitorFaviconURL = "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(defaultMonitorFaviconSVG))
 
 //go:embed internal/ui/page.html
 var monitorPageHTML string
@@ -23,6 +31,7 @@ type monitorPageData struct {
 	Title            string
 	Description      string
 	Footer           string
+	FaviconURL       any
 	CSS              template.CSS
 	JS               template.JS
 	ConfigJSON       template.JS
@@ -41,6 +50,11 @@ type monitorClientConfig struct {
 }
 
 func renderHTML(cfg Config) string {
+	var faviconURL any = cfg.FaviconURL
+	if cfg.FaviconURL == "" {
+		faviconURL = template.URL(defaultMonitorFaviconURL) // #nosec G203 -- this is the package-owned embedded favicon.
+	}
+
 	refreshMS := maxInt64(int64(cfg.Refresh/time.Millisecond), 250)
 	configJSON, _ := json.Marshal(monitorClientConfig{
 		RefreshMS:           refreshMS,
@@ -53,6 +67,7 @@ func renderHTML(cfg Config) string {
 		Title:            cfg.Title,
 		Description:      cfg.Description,
 		Footer:           cfg.Footer,
+		FaviconURL:       faviconURL,
 		CSS:              template.CSS(monitorStyleCSS),
 		JS:               template.JS(monitorAppJS),
 		ConfigJSON:       template.JS(configJSON),
