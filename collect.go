@@ -72,7 +72,6 @@ func appendCollectionErrors(existing []string, values ...string) []string {
 
 func (m *Monitor) collectHTTP(elapsed time.Duration) HTTPStats {
 	totalRequests := m.requests.Load()
-	completedRequests := m.completedRequests.Load()
 	statusCodes := StatusCodeStats{
 		Status1xx: m.status1xx.Load(),
 		Status2xx: m.status2xx.Load(),
@@ -80,15 +79,16 @@ func (m *Monitor) collectHTTP(elapsed time.Duration) HTTPStats {
 		Status4xx: m.status4xx.Load(),
 		Status5xx: m.status5xx.Load(),
 	}
+	completed := statusCodes.Status1xx + statusCodes.Status2xx + statusCodes.Status3xx + statusCodes.Status4xx + statusCodes.Status5xx
 
 	requestDelta := counterDelta(totalRequests, m.lastRequests)
-	completedDelta := counterDelta(completedRequests, m.lastCompletedRequests)
+	completedDelta := counterDelta(completed, m.lastCompleted)
 	status4xxDelta := counterDelta(statusCodes.Status4xx, m.lastStatus4xx)
 	status5xxDelta := counterDelta(statusCodes.Status5xx, m.lastStatus5xx)
 	window := m.latencyHistogram.snapshotAndReset()
 
 	m.lastRequests = totalRequests
-	m.lastCompletedRequests = completedRequests
+	m.lastCompleted = completed
 	m.lastStatus4xx = statusCodes.Status4xx
 	m.lastStatus5xx = statusCodes.Status5xx
 

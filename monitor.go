@@ -28,30 +28,29 @@ type Monitor struct {
 	proc      *process.Process
 	service   ServiceStats
 
-	requests          atomic.Uint64
-	completedRequests atomic.Uint64
-	inFlight          atomic.Uint64
-	status1xx         atomic.Uint64
-	status2xx         atomic.Uint64
-	status3xx         atomic.Uint64
-	status4xx         atomic.Uint64
-	status5xx         atomic.Uint64
-	latencyLastNS     atomic.Uint64
-	latencyRecent     atomic.Uint64
-	latencyMaxNS      atomic.Uint64
-	latencyHistogram  latencyHistogram
-	gcPauseTotal      atomic.Uint64
-	gcPauseSeen       atomic.Bool
-	goroutinePeak     atomic.Uint64
-	snapshot          atomic.Value // stores Stats
+	requests         atomic.Uint64
+	inFlight         atomic.Uint64
+	status1xx        atomic.Uint64
+	status2xx        atomic.Uint64
+	status3xx        atomic.Uint64
+	status4xx        atomic.Uint64
+	status5xx        atomic.Uint64
+	latencyLastNS    atomic.Uint64
+	latencyRecent    atomic.Uint64
+	latencyMaxNS     atomic.Uint64
+	latencyHistogram latencyHistogram
+	gcPauseTotal     atomic.Uint64
+	gcPauseSeen      atomic.Bool
+	goroutinePeak    atomic.Uint64
+	snapshot         atomic.Value // stores Stats
 
-	lastCollectedAt       time.Time
-	lastRequests          uint64
-	lastCompletedRequests uint64
-	lastStatus4xx         uint64
-	lastStatus5xx         uint64
-	lastNetworkReceived   uint64
-	lastNetworkSent       uint64
+	lastCollectedAt     time.Time
+	lastRequests        uint64
+	lastCompleted       uint64
+	lastStatus4xx       uint64
+	lastStatus5xx       uint64
+	lastNetworkReceived uint64
+	lastNetworkSent     uint64
 
 	stopOnce sync.Once
 	stopCh   chan struct{}
@@ -128,8 +127,7 @@ func (m *Monitor) RequestStarted() {
 	if m == nil {
 		return
 	}
-	m.requests.Add(1)
-	m.inFlight.Add(1)
+	m.requestStarted()
 }
 
 // RequestFinished records the status code and duration for a business request
@@ -138,8 +136,8 @@ func (m *Monitor) RequestFinished(status int, duration time.Duration) {
 	if m == nil {
 		return
 	}
-	decrementIfPositive(&m.inFlight)
-	m.recordBusinessRequest(status, duration)
+	shard := decrementIfPositive(&m.inFlight)
+	m.recordBusinessRequestSharded(status, duration, shard)
 }
 
 // BeginRequest records the start of a framework-neutral request and returns an
@@ -167,8 +165,8 @@ func (m *Monitor) ObserveRequest(status int, duration time.Duration) {
 	if m == nil {
 		return
 	}
-	m.requests.Add(1)
-	m.recordBusinessRequest(status, duration)
+	shard := m.requests.Add(1)
+	m.recordBusinessRequestSharded(status, duration, shard)
 }
 
 // Stop stops the background collector. It is safe to call Stop more than once.
@@ -224,17 +222,28 @@ func (m *Monitor) ignoreRequest(r *http.Request) bool {
 }
 
 func (m *Monitor) serveBusiness(w http.ResponseWriter, r *http.Request) {
-	m.RequestStarted()
+	shard := m.requestStarted()
 	started := time.Now()
 	rw := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 	defer func() {
-		m.RequestFinished(rw.status, time.Since(started))
+		m.inFlight.Add(^uint64(0))
+		m.recordBusinessRequestSharded(rw.status, time.Since(started), shard)
 	}()
 
 	m.next.ServeHTTP(rw, r)
 }
 
+func (m *Monitor) requestStarted() uint64 {
+	shard := m.requests.Add(1)
+	m.inFlight.Add(1)
+	return shard
+}
+
 func (m *Monitor) recordBusinessRequest(status int, duration time.Duration) {
+	m.recordBusinessRequestSharded(status, duration, 0)
+}
+
+func (m *Monitor) recordBusinessRequestSharded(status int, duration time.Duration, shard uint64) {
 	if status < 100 {
 		status = http.StatusOK
 	}
@@ -250,8 +259,6 @@ func (m *Monitor) recordBusinessRequest(status int, duration time.Duration) {
 	default:
 		m.status5xx.Add(1)
 	}
-	m.completedRequests.Add(1)
-
 	if duration <= 0 {
 		duration = time.Nanosecond
 	}
@@ -259,14 +266,17 @@ func (m *Monitor) recordBusinessRequest(status int, duration time.Duration) {
 	m.latencyLastNS.Store(ns)
 	m.updateRecentLatency(ns)
 	updateMaxUint64(&m.latencyMaxNS, ns)
-	m.latencyHistogram.observe(ns)
+	m.latencyHistogram.observeSharded(ns, shard)
 }
 
-func decrementIfPositive(value *atomic.Uint64) {
+func decrementIfPositive(value *atomic.Uint64) uint64 {
 	for {
 		current := value.Load()
-		if current == 0 || value.CompareAndSwap(current, current-1) {
-			return
+		if current == 0 {
+			return 0
+		}
+		if value.CompareAndSwap(current, current-1) {
+			return current
 		}
 	}
 }

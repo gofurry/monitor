@@ -120,12 +120,12 @@ func TestLatencyHistogramBoundaries(t *testing.T) {
 func TestLatencyHistogramConcurrent(t *testing.T) {
 	var histogram latencyHistogram
 	var wg sync.WaitGroup
-	for range 32 {
+	for shard := range uint64(32) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for range 1000 {
-				histogram.observe(25 * uint64(time.Millisecond))
+				histogram.observeSharded(25*uint64(time.Millisecond), shard)
 			}
 		}()
 	}
@@ -165,9 +165,6 @@ func TestBeginRequestIsIdempotent(t *testing.T) {
 	finish(http.StatusInternalServerError)
 	if got := m.requests.Load(); got != 1 {
 		t.Fatalf("requests = %d, want 1", got)
-	}
-	if got := m.completedRequests.Load(); got != 1 {
-		t.Fatalf("completed requests = %d, want 1", got)
 	}
 	if got := m.status2xx.Load(); got != 1 {
 		t.Fatalf("2xx = %d, want 1", got)

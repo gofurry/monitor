@@ -19,8 +19,10 @@ var latencyBoundsNS = [...]uint64{
 	5 * uint64(time.Second),
 }
 
+const latencyHistogramShards = 32
+
 type latencyHistogram struct {
-	buckets [len(latencyBoundsNS) + 1]atomic.Uint64
+	buckets [latencyHistogramShards][len(latencyBoundsNS) + 1]atomic.Uint64
 	maxNS   atomic.Uint64
 }
 
@@ -30,6 +32,10 @@ type latencyWindow struct {
 }
 
 func (h *latencyHistogram) observe(ns uint64) {
+	h.observeSharded(ns, 0)
+}
+
+func (h *latencyHistogram) observeSharded(ns, shard uint64) {
 	bucket := len(latencyBoundsNS)
 	for i, bound := range latencyBoundsNS {
 		if ns <= bound {
@@ -37,14 +43,16 @@ func (h *latencyHistogram) observe(ns uint64) {
 			break
 		}
 	}
-	h.buckets[bucket].Add(1)
+	h.buckets[shard&(latencyHistogramShards-1)][bucket].Add(1)
 	updateMaxUint64(&h.maxNS, ns)
 }
 
 func (h *latencyHistogram) snapshotAndReset() latencyWindow {
 	var window latencyWindow
-	for i := range h.buckets {
-		window.buckets[i] = h.buckets[i].Swap(0)
+	for shard := range h.buckets {
+		for bucket := range h.buckets[shard] {
+			window.buckets[bucket] += h.buckets[shard][bucket].Swap(0)
+		}
 	}
 	window.maxNS = h.maxNS.Swap(0)
 	return window
