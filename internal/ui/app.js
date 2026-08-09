@@ -9,6 +9,7 @@
     const messages = {
       en: {
         live: "LIVE",
+        partial: "PARTIAL",
         stale: "STALE",
         error: "ERROR",
         process: "Process",
@@ -50,10 +51,19 @@
         diskDevice: "Device",
         diskType: "Type",
         load1: "1m load",
+        networkRX: "Network RX",
+        networkTX: "Network TX",
+        receiveRate: "RX rate",
+        sendRate: "TX rate",
         requests: "Requests",
+        rps: "RPS",
         inFlight: "In-flight",
         recentLatency: "Recent latency",
-        maxLatency: "Max latency",
+        recentMaxLatency: "Recent max",
+        p50Latency: "P50 latency",
+        p95Latency: "P95 latency",
+        p99Latency: "P99 latency",
+        errorRate: "Error rate",
         statusCodes: "Status codes",
         statusCodesTitle: "HTTP Status Codes",
         statusTotal: "Total",
@@ -66,18 +76,25 @@
         memoryTrend: "Memory",
         heapGCTrend: "Heap / Next GC",
         goroutineTrend: "Goroutines",
-        requestTrend: "Requests / interval",
+        requestTrend: "Requests / second",
         latencyTrend: "HTTP latency",
         inFlightTrend: "In-flight",
         gcPauseTrend: "GC pause",
         recent: "Recent",
+        p95: "P95",
         max: "Max",
         active: "Active",
         window: "Window",
-        last: "Last"
+        last: "Last",
+        container: "Container",
+        memoryUsage: "Memory usage",
+        cpuLimit: "CPU limit",
+        unlimited: "Unlimited",
+        cores: "cores"
       },
       "zh-CN": {
         live: "运行中",
+        partial: "部分可用",
         stale: "已延迟",
         error: "错误",
         process: "进程",
@@ -119,10 +136,19 @@
         diskDevice: "设备",
         diskType: "类型",
         load1: "1分钟负载",
+        networkRX: "网络接收",
+        networkTX: "网络发送",
+        receiveRate: "接收速率",
+        sendRate: "发送速率",
         requests: "请求数",
+        rps: "每秒请求",
         inFlight: "处理中",
         recentLatency: "近期延迟",
-        maxLatency: "最大延迟",
+        recentMaxLatency: "近期最大延迟",
+        p50Latency: "P50 延迟",
+        p95Latency: "P95 延迟",
+        p99Latency: "P99 延迟",
+        errorRate: "错误率",
         statusCodes: "状态码",
         statusCodesTitle: "HTTP 状态码",
         statusTotal: "合计",
@@ -135,15 +161,21 @@
         memoryTrend: "内存",
         heapGCTrend: "堆 / 下次 GC",
         goroutineTrend: "Goroutine",
-        requestTrend: "区间请求数",
+        requestTrend: "每秒请求数",
         latencyTrend: "HTTP 延迟",
         inFlightTrend: "处理中请求",
         gcPauseTrend: "GC 暂停",
         recent: "近期",
+        p95: "P95",
         max: "最大",
         active: "活跃",
         window: "窗口",
-        last: "最近"
+        last: "最近",
+        container: "容器",
+        memoryUsage: "内存使用率",
+        cpuLimit: "CPU 限制",
+        unlimited: "无限制",
+        cores: "核"
       }
     };
     const languages = ["en", "zh-CN"];
@@ -155,14 +187,13 @@
       heapMiB: [],
       nextGCMiB: [],
       goroutines: [],
-      requestsDelta: [],
+      rps: [],
       latencyRecentNS: [],
-      latencyMaxNS: [],
+      latencyP95NS: [],
       inFlight: [],
       gcPauseRecentNS: [],
       gcPauseLastNS: []
     };
-    let previousSnapshot = null;
     let currentThemeMode = defaultTheme;
     let currentLang = defaultLanguage;
     let currentStatus = "live";
@@ -170,7 +201,10 @@
     let currentDisks = [];
     let currentRuntime = {};
     let currentHTTPStatusCodes = {};
-    let lastSuccessAt = 0;
+    let currentCollectionErrors = new Set();
+    let currentContainer = {};
+    let currentService = {};
+    let lastCollectedAt = 0;
 
     function storageGet(key) {
       try {
@@ -204,6 +238,8 @@
       updateDiskUI();
       updateRuntimeDetailUI();
       updateHTTPStatusUI();
+      updateServiceUI();
+      updateContainerUI();
     }
     function resolveTheme(mode) {
       if (mode === "light" || mode === "dark") return mode;
@@ -292,6 +328,51 @@
     function durationAxisNS(v) {
       return durationNS(v).replace(" ", "");
     }
+    function rateBytes(v) {
+      return bytes(v) + "/s";
+    }
+    function ratioPercent(v) {
+      return (Math.max(0, Number(v || 0)) * 100).toFixed(2) + "%";
+    }
+    function formatRPS(v) {
+      return Math.max(0, Number(v || 0)).toFixed(2) + " req/s";
+    }
+    function unavailable(key) {
+      return currentCollectionErrors.has(key);
+    }
+    function updateServiceUI() {
+      const service = currentService || {};
+      const name = $("service-name");
+      const meta = $("service-meta");
+      const parts = [];
+      if (service.environment) parts.push(service.environment);
+      if (service.version) parts.push(service.version);
+      if (service.go_version) parts.push(service.go_version);
+      name.textContent = service.name || "";
+      name.hidden = !service.name;
+      meta.textContent = parts.join(" · ");
+      meta.hidden = !parts.length;
+    }
+    function updateContainerUI() {
+      const container = currentContainer || {};
+      const card = $("container-card");
+      card.hidden = !container.detected;
+      if (!container.detected) return;
+      if (unavailable("container.memory")) {
+        $("container-memory").textContent = "N/A";
+        $("container-memory-percent").textContent = "N/A";
+      } else {
+        const limit = Number(container.memory_limit_bytes || 0);
+        $("container-memory").textContent = bytes(container.memory_usage_bytes) + " / " + (limit > 0 ? bytes(limit) : t("unlimited"));
+        $("container-memory-percent").textContent = limit > 0 ? pct(container.memory_used_percent) : t("unlimited");
+      }
+      if (unavailable("container.cpu")) {
+        $("container-cpu-limit").textContent = "N/A";
+      } else {
+        const cores = Number(container.cpu_quota_cores || 0);
+        $("container-cpu-limit").textContent = cores > 0 ? cores.toFixed(2).replace(/\.00$/, "") + " " + t("cores") : t("unlimited");
+      }
+    }
     function diskCountLabel(disks) {
       const count = disks.length;
       if (!count) return t("diskDetails");
@@ -346,10 +427,10 @@
       const list = $("disk-modal-list");
       if (!list) return;
       list.replaceChildren();
-      if (!currentDisks.length) {
+      if (unavailable("os.disk") || !currentDisks.length) {
         const empty = document.createElement("div");
         empty.className = "disk-item";
-        empty.textContent = t("diskNoData");
+        empty.textContent = unavailable("os.disk") ? "N/A" : t("diskNoData");
         list.appendChild(empty);
         return;
       }
@@ -392,7 +473,7 @@
     }
     function updateDiskUI() {
       const button = $("disk-details-button");
-      if (button) button.textContent = diskCountLabel(currentDisks);
+      if (button) button.textContent = unavailable("os.disk") ? "N/A" : diskCountLabel(currentDisks);
       renderDiskList();
     }
     function openDiskModal() {
@@ -505,53 +586,71 @@
       return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     }
     function renderSnapshot(data, elapsed) {
-      $("pid-cpu").textContent = pct(data.pid.cpu_percent);
-      $("pid-rss").textContent = bytes(data.pid.rss_bytes);
-      $("pid-threads").textContent = nf.format(data.pid.threads || 0);
-      $("pid-id").textContent = nf.format(data.pid.pid || 0);
-      $("pid-fds").textContent = nf.format(data.pid.fds || 0);
+      const collection = data.collection || {};
+      const pid = data.pid || {};
+      const os = data.os || {};
+      const http = data.http || {};
+      const latency = http.latency || {};
+      const rates = http.rates || {};
+      currentCollectionErrors = new Set(Array.isArray(collection.errors) ? collection.errors : []);
+      currentService = data.service || {};
+      currentContainer = data.container || {};
       currentRuntime = data.runtime || {};
+      updateServiceUI();
+      updateContainerUI();
+      $("pid-cpu").textContent = unavailable("pid.cpu") ? "N/A" : pct(pid.cpu_percent);
+      $("pid-rss").textContent = unavailable("pid.memory") ? "N/A" : bytes(pid.rss_bytes);
+      $("pid-threads").textContent = unavailable("pid.threads") ? "N/A" : nf.format(pid.threads || 0);
+      $("pid-id").textContent = nf.format(pid.pid || 0);
+      $("pid-fds").textContent = unavailable("pid.fds") ? "N/A" : nf.format(pid.fds || 0);
       $("rt-goroutines").textContent = nf.format(currentRuntime.goroutines || 0) + " / " + nf.format(currentRuntime.goroutine_peak || currentRuntime.goroutines || 0);
       updateRuntimeDetailUI();
       $("rt-next-gc").textContent = bytes(currentRuntime.next_gc_bytes);
       $("rt-uptime").textContent = uptime(currentRuntime.uptime_seconds);
-      $("os-cpu").textContent = pct(data.os.cpu_percent);
-      $("os-memory").textContent = pct(data.os.memory_used_percent);
-      $("os-total").textContent = bytes(data.os.memory_total_bytes);
-      currentDisks = Array.isArray(data.os.disks) ? data.os.disks : [];
+      $("os-cpu").textContent = unavailable("os.cpu") ? "N/A" : pct(os.cpu_percent);
+      $("os-memory").textContent = unavailable("os.memory") ? "N/A" : pct(os.memory_used_percent);
+      $("os-total").textContent = unavailable("os.memory") ? "N/A" : bytes(os.memory_total_bytes);
+      currentDisks = Array.isArray(os.disks) ? os.disks : [];
       updateDiskUI();
-      $("os-load").textContent = Number(data.os.load1 || 0).toFixed(2);
-      $("http-requests").textContent = nf.format(data.http.total_requests || 0);
-      $("http-in-flight").textContent = nf.format(data.http.in_flight_requests || 0);
-      $("http-latency-recent").textContent = durationNS(data.http.latency && data.http.latency.recent_ns);
-      $("http-latency-max").textContent = durationNS(data.http.latency && data.http.latency.max_ns);
-      currentHTTPStatusCodes = data.http.status_codes || {};
+      $("os-load").textContent = unavailable("os.load") ? "N/A" : Number(os.load1 || 0).toFixed(2);
+      const network = os.network || {};
+      $("os-network-rx").textContent = unavailable("os.network") ? "N/A" : bytes(network.received_bytes);
+      $("os-network-tx").textContent = unavailable("os.network") ? "N/A" : bytes(network.sent_bytes);
+      $("os-network-rx-rate").textContent = unavailable("os.network") ? "N/A" : rateBytes(network.receive_bps);
+      $("os-network-tx-rate").textContent = unavailable("os.network") ? "N/A" : rateBytes(network.send_bps);
+      $("http-rps").textContent = formatRPS(http.rps);
+      $("http-requests").textContent = nf.format(http.total_requests || 0);
+      $("http-in-flight").textContent = nf.format(http.in_flight_requests || 0);
+      $("http-error-rate").textContent = ratioPercent(rates.error_rate);
+      $("http-latency-p50").textContent = durationNS(latency.p50_ns);
+      $("http-latency-p95").textContent = durationNS(latency.p95_ns);
+      $("http-latency-p99").textContent = durationNS(latency.p99_ns);
+      $("http-latency-recent").textContent = durationNS(latency.recent_ns);
+      $("http-latency-recent-max").textContent = durationNS(latency.recent_max_ns);
+      currentHTTPStatusCodes = http.status_codes || {};
       updateHTTPStatusUI();
-      $("updated-at").textContent = new Date().toLocaleString();
+      const collectedAt = Date.parse(data.collected_at);
+      lastCollectedAt = Number.isFinite(collectedAt) ? collectedAt : Date.now();
+      $("updated-at").textContent = new Date(lastCollectedAt).toLocaleString();
       $("response-time").textContent = elapsed.toFixed(1) + " ms";
     }
     function pushHistory(snapshot) {
-      const requests = snapshot.http.total_requests || 0;
-      const previousRequests = previousSnapshot ? previousSnapshot.http.total_requests || 0 : requests;
-      const delta = Math.max(0, requests - previousRequests);
-
-      history.labels.push(new Date().toLocaleTimeString());
-      history.pidCPU.push(snapshot.pid.cpu_percent || 0);
-      history.osCPU.push(snapshot.os.cpu_percent || 0);
-      history.rssMiB.push(bytesToMiB(snapshot.pid.rss_bytes || 0));
+      history.labels.push(new Date(lastCollectedAt || Date.now()).toLocaleTimeString());
+      history.pidCPU.push(unavailable("pid.cpu") ? NaN : snapshot.pid.cpu_percent || 0);
+      history.osCPU.push(unavailable("os.cpu") ? NaN : snapshot.os.cpu_percent || 0);
+      history.rssMiB.push(unavailable("pid.memory") ? NaN : bytesToMiB(snapshot.pid.rss_bytes || 0));
       history.heapMiB.push(bytesToMiB(snapshot.runtime.heap_alloc_bytes || 0));
       history.nextGCMiB.push(bytesToMiB(snapshot.runtime.next_gc_bytes || 0));
       history.goroutines.push(snapshot.runtime.goroutines || 0);
-      history.requestsDelta.push(delta);
+      history.rps.push(snapshot.http.rps || 0);
       history.latencyRecentNS.push((snapshot.http.latency && snapshot.http.latency.recent_ns) || 0);
-      history.latencyMaxNS.push((snapshot.http.latency && snapshot.http.latency.max_ns) || 0);
+      history.latencyP95NS.push((snapshot.http.latency && snapshot.http.latency.p95_ns) || 0);
       history.inFlight.push(snapshot.http.in_flight_requests || 0);
       history.gcPauseRecentNS.push(snapshot.runtime.gc_pause_recent_ns || 0);
       history.gcPauseLastNS.push(snapshot.runtime.gc_pause_last_ns || 0);
       Object.keys(history).forEach(function(key) {
         while (history[key].length > maxPoints) history[key].shift();
       });
-      previousSnapshot = snapshot;
     }
     function drawGrid(ctx, width, height, padding, min, max, options) {
       const border = cssVar("--border");
@@ -653,11 +752,11 @@
         { data: visibleSamples(history.goroutines), color: accent }
       ], { minValue: 0, unit: "g" });
       drawLineChart($("request-chart"), [
-        { data: visibleSamples(history.requestsDelta), color: accent }
-      ], { minValue: 0, unit: "req" });
+        { data: visibleSamples(history.rps), color: accent }
+      ], { minValue: 0, unit: "req/s" });
       drawLineChart($("latency-chart"), [
         { data: visibleSamples(history.latencyRecentNS), color: accent },
-        { data: visibleSamples(history.latencyMaxNS), color: warn }
+        { data: visibleSamples(history.latencyP95NS), color: warn }
       ], { minValue: 0, formatValue: durationAxisNS, leftPadding: 70 });
       drawLineChart($("in-flight-chart"), [
         { data: visibleSamples(history.inFlight), color: accent }
@@ -701,8 +800,11 @@
         renderSnapshot(data, performance.now() - started);
         pushHistory(data);
         renderCharts();
-        lastSuccessAt = Date.now();
-        setStatus("live");
+        if (Date.now() - lastCollectedAt > refreshMS * 3) {
+          setStatus("stale");
+        } else {
+          setStatus(data.collection && data.collection.partial ? "partial" : "live");
+        }
       } catch (err) {
         setStatus("error");
       }
@@ -746,8 +848,8 @@
       updateScrollOrb();
     });
     setInterval(function() {
-      if (!lastSuccessAt || currentStatus === "error") return;
-      if (Date.now() - lastSuccessAt > refreshMS * 3) setStatus("stale");
+      if (!lastCollectedAt || currentStatus === "error") return;
+      if (Date.now() - lastCollectedAt > refreshMS * 3) setStatus("stale");
     }, 1000);
 
     currentLang = detectLang();

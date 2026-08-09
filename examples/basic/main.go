@@ -1,45 +1,57 @@
 package main
 
 import (
+	"crypto/subtle"
 	"log"
 	"net/http"
-	"runtime/debug"
+	"os"
 	"time"
 
 	"github.com/gofurry/monitor"
 )
 
 func main() {
-
-	// Increase the GC frequency
-	debug.SetGCPercent(10)
-
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-
-		// Increase the request delay to make it easier to observe.
-		a := 1
-		for {
-			a++
-			if a > 100000000 {
-				break
-			}
-		}
-
-		_, _ = w.Write([]byte("hello"))
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("Try /ok, /slow, /client-error, /server-error, or /monitor\n"))
 	})
+	mux.HandleFunc("/ok", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("ok\n"))
+	})
+	mux.HandleFunc("/slow", func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(250 * time.Millisecond)
+		_, _ = w.Write([]byte("slow response\n"))
+	})
+	mux.HandleFunc("/client-error", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "client error", http.StatusBadRequest)
+	})
+	mux.HandleFunc("/server-error", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "server error", http.StatusInternalServerError)
+	})
+
+	token := os.Getenv("MONITOR_TOKEN")
+	var authorize func(*http.Request) bool
+	if token != "" {
+		expected := []byte("Bearer " + token)
+		authorize = func(r *http.Request) bool {
+			return subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), expected) == 1
+		}
+		log.Println("monitor authorization enabled through MONITOR_TOKEN")
+	}
 
 	handler := monitor.New(mux, monitor.Config{
 		Path:                "/monitor",
 		Title:               "Example Monitor",
+		Description:         "Live process, runtime, system, container, network, and HTTP metrics.",
 		Footer:              "Powered by github.com/gofurry/monitor - MIT License.",
-		Description:         "Live process, runtime, system, and HTTP metrics for this Go service.",
+		ServiceName:         "monitor-example",
+		Version:             "v1.2.0-demo",
+		Environment:         "development",
 		DefaultLanguage:     "en",
 		DefaultTheme:        "dark",
 		DefaultSampleWindow: 60,
-		DiskPaths:           nil, // "nil" represents the observation of only the services currently deployed.
-		// DiskPaths:           []string{"C:\\", "D:\\"},
-		Refresh: 2 * time.Second,
+		Refresh:             500 * time.Millisecond,
+		Authorize:           authorize,
 	})
 
 	log.Println("listening on http://localhost:18848")

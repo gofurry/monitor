@@ -141,6 +141,17 @@
     .header-main {
       min-width: 0;
     }
+    .service-name {
+      margin-top: 8px;
+      font-size: 1.05rem;
+      font-weight: 720;
+      color: var(--text);
+    }
+    .service-meta {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
     h1 {
       margin: 0;
       overflow-wrap: anywhere;
@@ -253,6 +264,10 @@
       box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 18%, transparent);
     }
     #live-dot[data-status="stale"] {
+      background: var(--warn);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--warn) 18%, transparent);
+    }
+    #live-dot[data-status="partial"] {
       background: var(--warn);
       box-shadow: 0 0 0 4px color-mix(in srgb, var(--warn) 18%, transparent);
     }

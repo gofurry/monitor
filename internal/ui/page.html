@@ -13,6 +13,8 @@
     <header class="header">
       <div class="header-main">
         <h1>{{ .Title }}</h1>
+        <div id="service-name" class="service-name" hidden></div>
+        <div id="service-meta" class="service-meta" hidden></div>
       </div>
       <div class="header-side">
         <div class="status-box">
@@ -86,6 +88,10 @@
           <div class="row"><dt data-i18n="totalRam">Total RAM</dt><dd id="os-total">-</dd></div>
           <div class="row"><dt data-i18n="disk">Disk</dt><dd><button type="button" id="disk-details-button" class="metric-action">-</button></dd></div>
           <div class="row"><dt data-i18n="load1">Load1</dt><dd id="os-load">-</dd></div>
+          <div class="row"><dt data-i18n="networkRX">Network RX</dt><dd id="os-network-rx">-</dd></div>
+          <div class="row"><dt data-i18n="networkTX">Network TX</dt><dd id="os-network-tx">-</dd></div>
+          <div class="row"><dt data-i18n="receiveRate">RX rate</dt><dd id="os-network-rx-rate">-</dd></div>
+          <div class="row"><dt data-i18n="sendRate">TX rate</dt><dd id="os-network-tx-rate">-</dd></div>
         </dl>
       </section>
       <section class="metric-card">
@@ -98,11 +104,31 @@
           </div>
         </div>
         <dl>
-          <div class="row"><dt data-i18n="requests">Requests</dt><dd id="http-requests">-</dd></div>
+          <div class="row"><dt data-i18n="rps">RPS</dt><dd id="http-rps">-</dd></div>
+          <div class="row"><dt data-i18n="p95Latency">P95 latency</dt><dd id="http-latency-p95">-</dd></div>
+          <div class="row"><dt data-i18n="errorRate">Error rate</dt><dd id="http-error-rate">-</dd></div>
           <div class="row"><dt data-i18n="inFlight">In-flight</dt><dd id="http-in-flight">-</dd></div>
+          <div class="row"><dt data-i18n="requests">Requests</dt><dd id="http-requests">-</dd></div>
+          <div class="row"><dt data-i18n="p50Latency">P50 latency</dt><dd id="http-latency-p50">-</dd></div>
+          <div class="row"><dt data-i18n="p99Latency">P99 latency</dt><dd id="http-latency-p99">-</dd></div>
           <div class="row"><dt data-i18n="recentLatency">Recent latency</dt><dd id="http-latency-recent">-</dd></div>
-          <div class="row"><dt data-i18n="maxLatency">Max latency</dt><dd id="http-latency-max">-</dd></div>
+          <div class="row"><dt data-i18n="recentMaxLatency">Recent max</dt><dd id="http-latency-recent-max">-</dd></div>
           <div class="row"><dt data-i18n="statusCodes">Status codes</dt><dd><button type="button" id="http-status-button" class="metric-action">-</button></dd></div>
+        </dl>
+      </section>
+      <section id="container-card" class="metric-card" hidden>
+        <div class="metric-card__head">
+          <h2 data-i18n="container">Container</h2>
+          <div class="metric-pager" hidden>
+            <button type="button" class="metric-pager__prev" aria-label="Previous metric page">&lt;</button>
+            <span class="metric-pager__status">1 / 1</span>
+            <button type="button" class="metric-pager__next" aria-label="Next metric page">&gt;</button>
+          </div>
+        </div>
+        <dl>
+          <div class="row"><dt data-i18n="memory">Memory</dt><dd id="container-memory">-</dd></div>
+          <div class="row"><dt data-i18n="memoryUsage">Memory usage</dt><dd id="container-memory-percent">-</dd></div>
+          <div class="row"><dt data-i18n="cpuLimit">CPU limit</dt><dd id="container-cpu-limit">-</dd></div>
         </dl>
       </section>
     </div>
@@ -158,9 +184,9 @@
         </article>
         <article class="chart-card">
           <div class="chart-head">
-            <span data-i18n="requestTrend">Requests / interval</span>
+            <span data-i18n="requestTrend">Requests / second</span>
             <span class="chart-legend legend-list">
-              <span class="legend-item"><span class="legend-dot" data-series="main"></span>Req</span>
+              <span class="legend-item"><span class="legend-dot" data-series="main"></span>RPS</span>
             </span>
           </div>
           <canvas id="request-chart"></canvas>
@@ -170,7 +196,7 @@
             <span data-i18n="latencyTrend">HTTP latency</span>
             <span class="chart-legend legend-list">
               <span class="legend-item"><span class="legend-dot" data-series="recent"></span><span data-i18n="recent">Recent</span></span>
-              <span class="legend-item"><span class="legend-dot" data-series="max"></span><span data-i18n="max">Max</span></span>
+              <span class="legend-item"><span class="legend-dot" data-series="max"></span><span data-i18n="p95">P95</span></span>
             </span>
           </div>
           <canvas id="latency-chart"></canvas>
