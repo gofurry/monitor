@@ -471,6 +471,8 @@ func TestMonitorHTMLIncludesEnhancedUI(t *testing.T) {
 		`id="http-latency-p95"`,
 		`id="http-error-rate"`,
 		`id="container-card"`,
+		`cards--with-container`,
+		`grid-template-columns: repeat(5, minmax(0, 1fr))`,
 		`id="os-network-rx-rate"`,
 		`id="http-status-button"`,
 		`id="http-status-modal"`,

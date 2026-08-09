@@ -341,6 +341,8 @@
     function updateContainerUI() {
       const container = currentContainer || {};
       const card = $("container-card");
+      const cards = card.closest(".cards");
+      if (cards) cards.classList.toggle("cards--with-container", Boolean(container.detected));
       card.hidden = !container.detected;
       if (!container.detected) return;
       if (unavailable("container.memory")) {
