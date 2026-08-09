@@ -149,6 +149,29 @@ func BenchmarkMonitorObserveRequest(b *testing.B) {
 	}
 }
 
+func BenchmarkLatencyHistogramObserve(b *testing.B) {
+	var histogram latencyHistogram
+	duration := uint64(25 * time.Millisecond)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		histogram.observe(duration)
+	}
+}
+
+func BenchmarkMonitorBeginRequest(b *testing.B) {
+	m := NewMonitor(http.NotFoundHandler(), Config{Refresh: time.Hour})
+	defer m.Stop()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		finish := m.BeginRequest()
+		finish(http.StatusNoContent)
+	}
+}
+
 func BenchmarkMonitorManualRequestLifecycle(b *testing.B) {
 	m := NewMonitor(http.NotFoundHandler(), Config{Refresh: time.Hour})
 	defer m.Stop()
