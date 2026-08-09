@@ -26,24 +26,36 @@ type Monitor struct {
 
 	startedAt time.Time
 	proc      *process.Process
+	service   ServiceStats
 
-	requests      atomic.Uint64
-	inFlight      atomic.Uint64
-	status1xx     atomic.Uint64
-	status2xx     atomic.Uint64
-	status3xx     atomic.Uint64
-	status4xx     atomic.Uint64
-	status5xx     atomic.Uint64
-	latencyLastNS atomic.Uint64
-	latencyRecent atomic.Uint64
-	latencyMaxNS  atomic.Uint64
-	gcPauseTotal  atomic.Uint64
-	gcPauseSeen   atomic.Bool
-	goroutinePeak atomic.Uint64
-	snapshot      atomic.Value // stores Stats
+	requests          atomic.Uint64
+	completedRequests atomic.Uint64
+	inFlight          atomic.Uint64
+	status1xx         atomic.Uint64
+	status2xx         atomic.Uint64
+	status3xx         atomic.Uint64
+	status4xx         atomic.Uint64
+	status5xx         atomic.Uint64
+	latencyLastNS     atomic.Uint64
+	latencyRecent     atomic.Uint64
+	latencyMaxNS      atomic.Uint64
+	latencyHistogram  latencyHistogram
+	gcPauseTotal      atomic.Uint64
+	gcPauseSeen       atomic.Bool
+	goroutinePeak     atomic.Uint64
+	snapshot          atomic.Value // stores Stats
+
+	lastCollectedAt       time.Time
+	lastRequests          uint64
+	lastCompletedRequests uint64
+	lastStatus4xx         uint64
+	lastStatus5xx         uint64
+	lastNetworkReceived   uint64
+	lastNetworkSent       uint64
 
 	stopOnce sync.Once
 	stopCh   chan struct{}
+	doneCh   chan struct{}
 }
 
 // New creates a monitor middleware around next.
@@ -64,12 +76,15 @@ func NewMonitor(next http.Handler, config ...Config) *Monitor {
 		next = http.NotFoundHandler()
 	}
 
+	cfg := applyConfig(config)
 	m := &Monitor{
 		next:      next,
-		cfg:       applyConfig(config),
+		cfg:       cfg,
 		startedAt: time.Now(),
 		proc:      currentProcess(),
+		service:   collectServiceStats(cfg),
 		stopCh:    make(chan struct{}),
+		doneCh:    make(chan struct{}),
 	}
 	m.latencyRecent.Store(ewmaUninitializedBits)
 	m.start()
@@ -123,8 +138,24 @@ func (m *Monitor) RequestFinished(status int, duration time.Duration) {
 	if m == nil {
 		return
 	}
-	m.inFlight.Add(^uint64(0))
+	decrementIfPositive(&m.inFlight)
 	m.recordBusinessRequest(status, duration)
+}
+
+// BeginRequest records the start of a framework-neutral request and returns an
+// idempotent completion function that records its status and duration.
+func (m *Monitor) BeginRequest() func(status int) {
+	if m == nil {
+		return func(int) {}
+	}
+	m.RequestStarted()
+	started := time.Now()
+	var once sync.Once
+	return func(status int) {
+		once.Do(func() {
+			m.RequestFinished(status, time.Since(started))
+		})
+	}
 }
 
 // ObserveRequest records one completed business request without changing the
@@ -142,9 +173,13 @@ func (m *Monitor) ObserveRequest(status int, duration time.Duration) {
 
 // Stop stops the background collector. It is safe to call Stop more than once.
 func (m *Monitor) Stop() {
+	if m == nil {
+		return
+	}
 	m.stopOnce.Do(func() {
 		close(m.stopCh)
 	})
+	<-m.doneCh
 }
 
 func (m *Monitor) start() {
@@ -153,6 +188,7 @@ func (m *Monitor) start() {
 	ticker := time.NewTicker(m.cfg.Refresh)
 	go func() {
 		defer ticker.Stop()
+		defer close(m.doneCh)
 		for {
 			select {
 			case <-ticker.C:
@@ -166,6 +202,10 @@ func (m *Monitor) start() {
 
 func (m *Monitor) serveMonitor(w http.ResponseWriter, r *http.Request) {
 	setMonitorHeaders(w)
+	if m.cfg.Authorize != nil && !m.cfg.Authorize(r) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		w.Header().Set("Allow", "GET, HEAD")
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -210,6 +250,7 @@ func (m *Monitor) recordBusinessRequest(status int, duration time.Duration) {
 	default:
 		m.status5xx.Add(1)
 	}
+	m.completedRequests.Add(1)
 
 	if duration <= 0 {
 		duration = time.Nanosecond
@@ -218,6 +259,16 @@ func (m *Monitor) recordBusinessRequest(status int, duration time.Duration) {
 	m.latencyLastNS.Store(ns)
 	m.updateRecentLatency(ns)
 	updateMaxUint64(&m.latencyMaxNS, ns)
+	m.latencyHistogram.observe(ns)
+}
+
+func decrementIfPositive(value *atomic.Uint64) {
+	for {
+		current := value.Load()
+		if current == 0 || value.CompareAndSwap(current, current-1) {
+			return
+		}
+	}
 }
 
 const (

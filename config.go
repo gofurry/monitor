@@ -17,6 +17,7 @@ const (
 	defaultBackground   = "solid"
 	defaultSampleWindow = 60
 	defaultRefresh      = 2 * time.Second
+	minRefresh          = 250 * time.Millisecond
 )
 
 // Config controls the monitor middleware.
@@ -43,6 +44,16 @@ type Config struct {
 	// root-relative path or an absolute HTTP(S) URL. Empty or invalid values use
 	// the built-in favicon.
 	FaviconURL string
+
+	// ServiceName identifies the service in the dashboard and JSON snapshot.
+	// Empty uses the executable name.
+	ServiceName string
+
+	// Version identifies the running service version. Empty uses Go build info.
+	Version string
+
+	// Environment describes the deployment environment, such as "production".
+	Environment string
 
 	// DefaultLanguage controls the initial HTML UI language when the browser has
 	// no saved monitor language preference. Supported values are "en" and
@@ -72,6 +83,10 @@ type Config struct {
 
 	// APIOnly makes Path return JSON even when the request does not ask for it.
 	APIOnly bool
+
+	// Authorize reports whether a request may access the monitor endpoint. A
+	// denied request receives 401 Unauthorized. Nil allows all requests.
+	Authorize func(r *http.Request) bool
 
 	// IgnoreRequest reports whether r should be excluded from HTTP request
 	// counting. It does not stop the request from being served by the next
@@ -134,6 +149,9 @@ func applyConfig(configs []Config) Config {
 	}
 	if cfg.Refresh <= 0 {
 		cfg.Refresh = defaultRefresh
+	}
+	if cfg.Refresh < minRefresh {
+		cfg.Refresh = minRefresh
 	}
 	return cfg
 }

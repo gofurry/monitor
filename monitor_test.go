@@ -292,7 +292,7 @@ func TestMonitorCollectsGCPauseStats(t *testing.T) {
 func TestCollectOSIncludesDiskStats(t *testing.T) {
 	m := &Monitor{cfg: DefaultConfig()}
 
-	stats := m.collectOS()
+	stats, _ := m.collectOS(0)
 	if stats.DiskTotalBytes == 0 {
 		t.Fatal("expected disk total bytes")
 	}
