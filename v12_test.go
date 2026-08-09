@@ -227,6 +227,31 @@ func TestRefreshIsClamped(t *testing.T) {
 	}
 }
 
+func TestSnapshotAndHeaderOmitServiceIdentity(t *testing.T) {
+	m := NewMonitor(http.NotFoundHandler(), Config{Refresh: time.Hour})
+	defer m.Stop()
+
+	data, err := json.Marshal(m.Current())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var snapshot map[string]json.RawMessage
+	if err := json.Unmarshal(data, &snapshot); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := snapshot["service"]; exists {
+		t.Fatalf("snapshot contains service identity: %s", data)
+	}
+
+	recorder := httptest.NewRecorder()
+	m.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/monitor", nil))
+	for _, unwanted := range []string{`id="service-name"`, `id="service-meta"`} {
+		if strings.Contains(recorder.Body.String(), unwanted) {
+			t.Fatalf("monitor header contains %q", unwanted)
+		}
+	}
+}
+
 func TestCgroupV2Collection(t *testing.T) {
 	root := t.TempDir()
 	writeTestFile(t, root, "memory.current", "536870912\n")
