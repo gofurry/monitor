@@ -227,25 +227,27 @@ func TestRefreshIsClamped(t *testing.T) {
 	}
 }
 
-func TestServiceStatsOverridesAndPrivacy(t *testing.T) {
-	stats := collectServiceStats(Config{
-		ServiceName: "example-api",
-		Version:     "v1.2.0",
-		Environment: "production",
-	})
-	if stats.Name != "example-api" || stats.Version != "v1.2.0" || stats.Environment != "production" {
-		t.Fatalf("service stats = %+v", stats)
-	}
-	if stats.GoVersion == "" {
-		t.Fatal("Go version is empty")
-	}
-	data, err := json.Marshal(stats)
+func TestSnapshotAndHeaderOmitServiceIdentity(t *testing.T) {
+	m := NewMonitor(http.NotFoundHandler(), Config{Refresh: time.Hour})
+	defer m.Stop()
+
+	data, err := json.Marshal(m.Current())
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, forbidden := range []string{"executable", "working_directory", "gopath", "remote_url"} {
-		if strings.Contains(strings.ToLower(string(data)), forbidden) {
-			t.Fatalf("service JSON contains private field %q: %s", forbidden, data)
+	var snapshot map[string]json.RawMessage
+	if err := json.Unmarshal(data, &snapshot); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := snapshot["service"]; exists {
+		t.Fatalf("snapshot contains service identity: %s", data)
+	}
+
+	recorder := httptest.NewRecorder()
+	m.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/monitor", nil))
+	for _, unwanted := range []string{`id="service-name"`, `id="service-meta"`} {
+		if strings.Contains(recorder.Body.String(), unwanted) {
+			t.Fatalf("monitor header contains %q", unwanted)
 		}
 	}
 }

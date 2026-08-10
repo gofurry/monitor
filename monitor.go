@@ -26,7 +26,6 @@ type Monitor struct {
 
 	startedAt time.Time
 	proc      *process.Process
-	service   ServiceStats
 
 	requests         atomic.Uint64
 	inFlight         atomic.Uint64
@@ -81,7 +80,6 @@ func NewMonitor(next http.Handler, config ...Config) *Monitor {
 		cfg:       cfg,
 		startedAt: time.Now(),
 		proc:      currentProcess(),
-		service:   collectServiceStats(cfg),
 		stopCh:    make(chan struct{}),
 		doneCh:    make(chan struct{}),
 	}

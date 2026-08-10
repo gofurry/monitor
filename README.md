@@ -246,9 +246,6 @@ handler := monitor.New(mux, monitor.Config{
 	Description:         "Live production service metrics.",
 	Footer:              "Copyright 2026 Example Inc.",
 	FaviconURL:          "/assets/favicon.svg",
-	ServiceName:         "payments-api",
-	Version:             "v1.2.0",
-	Environment:         "production",
 	DefaultLanguage:     "en",
 	DefaultTheme:        "dark",
 	Background:          "solid",
@@ -274,9 +271,6 @@ Defaults:
 | `Description` | `Live process, runtime, system, and HTTP metrics for this Go service.` | Short visible description below the header. |
 | `Footer` | `Powered by github.com/gofurry/monitor - MIT License.` | Footer text for copyright, ownership, or license notes. |
 | `FaviconURL` | built-in favicon | Overrides the dashboard favicon with a root-relative path or absolute HTTP(S) URL. Empty or invalid values use the built-in favicon. |
-| `ServiceName` | executable basename | Service name shown in the UI and snapshot. |
-| `Version` | Go module build version | Running service version; a configured value takes precedence. |
-| `Environment` | empty | Deployment environment such as `production`. |
 | `DefaultLanguage` | `en` | Initial UI language when no browser preference is saved. Supported values: `en`, `zh-CN`. |
 | `DefaultTheme` | `dark` | Initial UI theme when no browser preference is saved. Supported values: `light`, `dark`. |
 | `Background` | `solid` | HTML page background. Supported values: `solid`, `grid`. |
@@ -377,15 +371,6 @@ Use a dedicated observability stack such as Prometheus, Grafana, tracing, and ce
   "collection": {
     "duration_ns": 1850000,
     "partial": false
-  },
-  "service": {
-    "name": "payments-api",
-    "version": "v1.2.0",
-    "environment": "production",
-    "go_version": "go1.24.6",
-    "module": "example.com/payments",
-    "revision": "abc123",
-    "vcs_modified": false
   },
   "pid": {
     "cpu_percent": 2.4,

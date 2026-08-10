@@ -29,7 +29,6 @@ func (m *Monitor) collectOnce() {
 
 	stats := Stats{
 		SchemaVersion: StatsSchemaVersion,
-		Service:       m.service,
 		PID:           pidStats,
 		Runtime:       m.collectRuntime(),
 		OS:            osStats,

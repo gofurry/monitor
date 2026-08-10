@@ -141,17 +141,6 @@
     .header-main {
       min-width: 0;
     }
-    .service-name {
-      margin-top: 8px;
-      font-size: 1.05rem;
-      font-weight: 720;
-      color: var(--text);
-    }
-    .service-meta {
-      margin-top: 3px;
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
     h1 {
       margin: 0;
       overflow-wrap: anywhere;
@@ -333,6 +322,11 @@
     .cards {
       grid-template-columns: repeat(4, minmax(0, 1fr));
       margin-top: 20px;
+    }
+    @media (min-width: 981px) {
+      .cards.cards--with-container {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
     }
     .description-card {
       margin-top: 4px;

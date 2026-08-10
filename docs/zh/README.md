@@ -243,9 +243,6 @@ handler := monitor.New(mux, monitor.Config{
 	Description:         "Live production service metrics.",
 	Footer:              "Copyright 2026 Example Inc.",
 	FaviconURL:          "/assets/favicon.svg",
-	ServiceName:         "payments-api",
-	Version:             "v1.2.0",
-	Environment:         "production",
 	DefaultLanguage:     "en",
 	DefaultTheme:        "dark",
 	Background:          "solid",
@@ -271,9 +268,6 @@ handler := monitor.New(mux, monitor.Config{
 | `Description` | `Live process, runtime, system, and HTTP metrics for this Go service.` | 页头下方的简短说明。 |
 | `Footer` | `Powered by github.com/gofurry/monitor - MIT License.` | 页脚文本，可用于版权、归属或许可证说明。 |
 | `FaviconURL` | 内嵌 favicon | 用站内相对 URL 或 HTTP(S) 绝对 URL 覆盖仪表盘图标。为空或无效时使用内嵌图标。 |
-| `ServiceName` | 可执行文件名 | UI 和快照中显示的服务名。 |
-| `Version` | Go module 构建版本 | 当前服务版本；显式配置优先。 |
-| `Environment` | 空 | 部署环境，例如 `production`。 |
 | `DefaultLanguage` | `en` | 浏览器没有保存偏好时的初始 UI 语言。支持值：`en`、`zh-CN`。 |
 | `DefaultTheme` | `dark` | 浏览器没有保存偏好时的初始 UI 主题。支持值：`light`、`dark`。 |
 | `Background` | `solid` | HTML 页面背景。支持值：`solid`、`grid`。 |
@@ -366,15 +360,6 @@ TLS 终止和网络层访问限制应在本包之外完成，监控 token 不要
   "collection": {
     "duration_ns": 1850000,
     "partial": false
-  },
-  "service": {
-    "name": "payments-api",
-    "version": "v1.2.0",
-    "environment": "production",
-    "go_version": "go1.24.6",
-    "module": "example.com/payments",
-    "revision": "abc123",
-    "vcs_modified": false
   },
   "pid": {
     "cpu_percent": 2.4,

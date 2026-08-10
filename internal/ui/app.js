@@ -203,7 +203,6 @@
     let currentHTTPStatusCodes = {};
     let currentCollectionErrors = new Set();
     let currentContainer = {};
-    let currentService = {};
     let lastCollectedAt = 0;
 
     function storageGet(key) {
@@ -238,7 +237,6 @@
       updateDiskUI();
       updateRuntimeDetailUI();
       updateHTTPStatusUI();
-      updateServiceUI();
       updateContainerUI();
     }
     function resolveTheme(mode) {
@@ -340,22 +338,11 @@
     function unavailable(key) {
       return currentCollectionErrors.has(key);
     }
-    function updateServiceUI() {
-      const service = currentService || {};
-      const name = $("service-name");
-      const meta = $("service-meta");
-      const parts = [];
-      if (service.environment) parts.push(service.environment);
-      if (service.version) parts.push(service.version);
-      if (service.go_version) parts.push(service.go_version);
-      name.textContent = service.name || "";
-      name.hidden = !service.name;
-      meta.textContent = parts.join(" · ");
-      meta.hidden = !parts.length;
-    }
     function updateContainerUI() {
       const container = currentContainer || {};
       const card = $("container-card");
+      const cards = card.closest(".cards");
+      if (cards) cards.classList.toggle("cards--with-container", Boolean(container.detected));
       card.hidden = !container.detected;
       if (!container.detected) return;
       if (unavailable("container.memory")) {
@@ -593,10 +580,8 @@
       const latency = http.latency || {};
       const rates = http.rates || {};
       currentCollectionErrors = new Set(Array.isArray(collection.errors) ? collection.errors : []);
-      currentService = data.service || {};
       currentContainer = data.container || {};
       currentRuntime = data.runtime || {};
-      updateServiceUI();
       updateContainerUI();
       $("pid-cpu").textContent = unavailable("pid.cpu") ? "N/A" : pct(pid.cpu_percent);
       $("pid-rss").textContent = unavailable("pid.memory") ? "N/A" : bytes(pid.rss_bytes);
